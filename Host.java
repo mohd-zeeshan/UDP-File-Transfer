@@ -5,7 +5,7 @@ import java.util.Arrays;
 public class Host {
 
 	private static final int PORT = Ports.HOST_PORT; 
-	   private static final int DESTINATION_PORT = Ports.SERVER_PORT;
+	private static final int DESTINATION_PORT = Ports.SERVER_PORT;
    
    DatagramPacket sendPacket, receivePacket;
    DatagramSocket sendSocket, receiveSocket;
