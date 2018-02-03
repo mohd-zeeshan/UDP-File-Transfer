@@ -28,8 +28,8 @@ SETUP INSTRUCTIONS:
 			***NOTE: 
 			For RRQ: the file must reside in "test_files/server" folder. (e.g 'server_big.txt')
 			For WRQ: the file must reside in "test_files/client" folder. (e.g 'client_big.txt')
-		7. For RRQ: The file now should be transferred inside 'test_files/client' folder from server.
-		   For WRQ: The file should be transferred inside 'test_files/server' folder.
+		7. For RRQ: The file now should be transferred to the 'test_files/client' folder from server.
+		   For WRQ: The file should be transferred to the 'test_files/server' folder from client.
 		8. On the server console enter 'exit' to shut down server OR enter 'c' to continue.
 			Note: Must enter 'c' to continue transferring file.
 		9. On the client console either enter 'exit' to shut down client or repeat step 5 to 8 to continue transferring files.
