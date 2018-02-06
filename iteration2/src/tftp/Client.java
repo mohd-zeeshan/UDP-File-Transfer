@@ -77,27 +77,30 @@ public class Client {
 			FileInputStream in = new FileInputStream(file);
 			int chunkLen = 0;
 			int block = 0;
+			boolean breakOut = false;
 			do {
 				if(receivedCorrectACK(block)) {
-					System.out.println("Correct ACK received. Sending data!\n");
+					System.out.println("Correct ACK received!\n");
 				} else {
-					System.out.println("Wrong ACK received. Ignore sending data!\n");
+					System.out.println("Wrong ACK received!\n");
 					break;
 				}
+				if(breakOut) break;
 				byte[] data = new byte[Packet.DATA_PACKET_SIZE-4];
 				chunkLen = in.read(data);
-				Packet dataPacket = new DataPacket(block, FileHandler.trim(data), receivePacket.getAddress(), receivePacket.getPort());
+				byte[] content = FileHandler.trim(data);
+				breakOut = content.length < 512 ? true : false;
+				Packet dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
 				send(dataPacket);
-				if(FileHandler.trim(data).length < 512) {
-					break;
-				}
 				block++;
 			} while(chunkLen != -1);
 			in.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+			System.exit(1);
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 	

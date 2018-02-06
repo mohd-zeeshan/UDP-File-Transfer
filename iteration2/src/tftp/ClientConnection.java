@@ -80,6 +80,9 @@ public class ClientConnection implements Runnable {
 			FileHandler.writeToFile(Server.SERVER_PATH+RequestPacket.getFilename(packet), content);
 			block++;
 		} while(!DataPacket.isLastPacket(aPacket));
+		// send last ACK
+		Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
+		send(sendReceiveSocket, ack.getPacket());
 	}
 
 	/**
@@ -103,9 +106,9 @@ public class ClientConnection implements Runnable {
 					break;
 				}
 				if(receiveACK(block)) {
-					System.out.println("Correct ACK received. Continuing sending data.\n");
+					System.out.println("Correct ACK received!\n");
 				} else {
-					System.out.println("Wrong ACK received. Ignore sending data!\n");
+					System.out.println("Wrong ACK received!\n");
 					break;
 				}
 				block++;
