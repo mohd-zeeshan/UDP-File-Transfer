@@ -110,6 +110,7 @@ public class ClientConnection implements Runnable {
 				}
 				block++;
 		    } while (chunkLen != -1);
+		    receiveACK(block);		// receive the last ACK
 		    in.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
