@@ -16,15 +16,16 @@ public class Client {
 	
 	private DatagramSocket sendReceiveSocket;
 	private DatagramPacket sendPacket, receivePacket;
-	public static enum RequestType {READ, WRITE, INVALID};
-	public static int CLIENT_PORT = 23;
+	public static int CLIENT_PORT = 5023;
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
+	private boolean rrqSuccessful;
 	
 	/**
 	 * Constructor for Client class. Creates a socket for sending and receiving.
 	 */
 	public Client() {
+		rrqSuccessful = false;
 		try {
 			sendReceiveSocket = new DatagramSocket();
 		} catch (SocketException e) {
@@ -44,10 +45,47 @@ public class Client {
 			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
 			send(request);
 			receiveDataAndSendACK(filename);
-			System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
+			if(rrqSuccessful) {
+				System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
+			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Receives data from host and sends ACK packet.
+	 * A block of data < 512 bytes terminates the transfer.
+	 * 
+	 * @param filename
+	 */
+	private void receiveDataAndSendACK(String filename) {
+		boolean fileChecked = false;
+		do {
+			receive();
+			File file = new File(CLIENT_PATH + filename);
+			if(!fileChecked && file.exists()) {
+				fileChecked = true;
+				String errMsg = "A file named '" + filename + "' already exists in client!";
+				Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
+				send(errorPacket);
+				System.out.println("Client says: " + errMsg + "\nTerminating...\n");
+				break;
+			}
+			if(Packet.isERROR(receivePacket)) {
+				rrqSuccessful = false;
+				System.out.println("Client says: ERROR Packet received with message: " + new String(this.receivePacket.getData()));
+				System.out.println("Quiting...\n");
+				break;
+			}
+			FileHandler.writeToFile(CLIENT_PATH + filename, FileHandler.trim(DataPacket.getDataFromPacket(receivePacket)));
+			byte[] blockNum = ACKPacket.getBlock(receivePacket);
+			Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
+			System.out.println("DATA received. Sending ACK...");
+			send(ack);
+			rrqSuccessful = true;
+			fileChecked = true;
+		} while(!DataPacket.isLastPacket(receivePacket));
 	}
 	
 	/**
@@ -155,23 +193,6 @@ public class Client {
 	}
 	
 	/**
-	 * Receives data from host and sends ACK packet.
-	 * A block of data < 512 bytes terminates the transfer.
-	 * 
-	 * @param filename
-	 */
-	private void receiveDataAndSendACK(String filename) {
-		do {
-			receive();
-			FileHandler.writeToFile(CLIENT_PATH + filename, FileHandler.trim(DataPacket.getDataFromPacket(receivePacket)));
-			byte[] blockNum = ACKPacket.getBlock(receivePacket);
-			Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
-			System.out.println("DATA received. Sending ACK...");
-			send(ack);
-		} while(!DataPacket.isLastPacket(receivePacket));
-	}
-	
-	/**
 	 * Takes user input. Asks if user wants to read or write file. Then asks for the filename
 	 * 
 	 */
@@ -207,7 +228,8 @@ public class Client {
 		
 	public static void main(String[] args) {
 		Client c = new Client();
-		c.takeInput();
+//		c.takeInput();
+		c.read("server_big.txt");
 	}
 
 }

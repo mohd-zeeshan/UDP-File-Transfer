@@ -92,8 +92,9 @@ public class ClientConnection implements Runnable {
 	 * @param packet
 	 */
 	private void handleRRQ(DatagramPacket packet) {
+		String filename = Server.SERVER_PATH + RequestPacket.getFilename(packet);
 		try {
-		    File file = new File(Server.SERVER_PATH + RequestPacket.getFilename(packet));
+		    File file = new File(filename);
 		    FileInputStream in = new FileInputStream(file);
 		    int chunkLen = 0;
 		    int block = 1;		    
@@ -102,13 +103,25 @@ public class ClientConnection implements Runnable {
 				chunkLen = in.read(data);
 				Packet dataPacket = new DataPacket(block, FileHandler.trim(data), packet.getAddress(), packet.getPort());
 				send(sendReceiveSocket, dataPacket.getPacket());
+				if(Packet.isERROR(receivePacket))
 				if(FileHandler.trim(data).length < 512) {
 					break;
 				}
-				if(receiveACK(block)) {
-					System.out.println("Correct ACK received!\n");
-				} else {
-					System.out.println("Wrong ACK received!\n");
+				
+				byte receivedData[] = new byte[500];
+			    DatagramPacket dp = new DatagramPacket(receivedData, receivedData.length);
+				receive(sendReceiveSocket, dp);
+				
+				if(Packet.isACK(dp)) {
+					if(Packet.getBlockNumber(dp) == block) {
+						System.out.println("Correct ACK received!\n");
+					} else {
+						System.out.println("Wrong ACK received!\n");
+						break;
+					}
+				} else if(Packet.isERROR(dp)) {
+					System.out.println("Server says: ERROR Packet received with message: " + new String(dp.getData()));
+					System.out.println("Terminating...\n");
 					break;
 				}
 				block++;
@@ -116,8 +129,10 @@ public class ClientConnection implements Runnable {
 		    receiveACK(block);		// receive the last ACK
 		    in.close();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			System.exit(1);
+			String errMsg = "File '" + filename + "' does not exist!";
+			ErrorPacket ep = new ErrorPacket(1, errMsg.getBytes(), packet.getAddress(), packet.getPort());
+			send(sendReceiveSocket, ep.getPacket());
+			System.out.println("Connection terminated!\n");
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);

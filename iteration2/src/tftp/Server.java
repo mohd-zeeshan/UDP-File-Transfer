@@ -15,7 +15,7 @@ public class Server {
 	
 	private DatagramSocket receiveSocket;
 	private DatagramPacket receivePacket;
-	public static final int SERVER_PORT = 69;
+	public static final int SERVER_PORT = 5069;
 	public static final String SERVER_PATH = "test_files/server/";
 	
 	/**

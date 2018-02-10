@@ -18,6 +18,7 @@ public class Packet {
 	public static final int WRQ_OPCODE = 2;
 	public static final int DATA_OPCODE = 3;
 	public static final int ACK_OPCODE = 4;
+	public static final int ERROR_OPCODE = 5;
 	public static final int DATA_PACKET_SIZE = 516;
 
 	/**
@@ -98,6 +99,15 @@ public class Packet {
 	 */
 	public static boolean isDATA(DatagramPacket packet) {
 		return packet.getData()[1] == DATA_OPCODE;
+	}
+	
+	/**
+	 * Checks if packet is ERROR.
+	 * @param packet
+	 * @return
+	 */
+	public static boolean isERROR(DatagramPacket packet) {
+		return packet.getData()[1] == ERROR_OPCODE;
 	}
 
 	/**
