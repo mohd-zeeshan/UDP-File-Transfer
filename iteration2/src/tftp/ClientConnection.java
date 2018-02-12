@@ -120,7 +120,7 @@ public class ClientConnection implements Runnable {
 						break;
 					}
 				} else if(Packet.isERROR(dp)) {
-					System.out.println("Server says: ERROR Packet received with message: " + new String(dp.getData()));
+					System.out.println("Server says: ERROR Packet received with message: " + new String(dp.getData(), 4, dp.getLength()));
 					System.out.println("Terminating...\n");
 					break;
 				}

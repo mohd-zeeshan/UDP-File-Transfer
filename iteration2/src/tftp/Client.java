@@ -16,7 +16,7 @@ public class Client {
 	
 	private DatagramSocket sendReceiveSocket;
 	private DatagramPacket sendPacket, receivePacket;
-	public static int CLIENT_PORT = 5023;
+	public static int CLIENT_PORT = 23;
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
 	private boolean rrqSuccessful;
