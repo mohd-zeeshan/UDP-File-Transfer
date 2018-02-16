@@ -257,8 +257,7 @@ public class Client {
 		
 	public static void main(String[] args) {
 		Client c = new Client();
-//		c.takeInput();
-		c.read("server_big.txt");
+		c.takeInput();
 	}
 
 }

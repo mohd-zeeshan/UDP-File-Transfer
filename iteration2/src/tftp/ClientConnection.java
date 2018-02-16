@@ -3,7 +3,6 @@ package tftp;
 import java.io.*;
 import java.net.*;
 import java.nio.file.AccessDeniedException;
-import java.nio.file.Files;
 
 import packet.*;
 
