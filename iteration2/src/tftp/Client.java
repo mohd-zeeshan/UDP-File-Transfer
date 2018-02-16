@@ -2,6 +2,7 @@ package tftp;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.AccessDeniedException;
 import java.util.Scanner;
 
 import packet.*;
@@ -124,10 +125,10 @@ public class Client {
 					break;
 				}
 				if(breakOut) break;
-				byte[] data = new byte[Packet.DATA_PACKET_SIZE-4];
+				byte[] data = new byte[Packet.DATA_PACKET_SIZE - 4];
 				chunkLen = in.read(data);
 				byte[] content = FileHandler.trim(data);
-				breakOut = content.length < 512 ? true : false;
+				breakOut = content.length < 512;
 				Packet dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
 				send(dataPacket);
 				block++;
@@ -136,6 +137,9 @@ public class Client {
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);
+		} catch (AccessDeniedException e) {
+			System.out.println("File Access violation: " + filename );
+	    	System.exit(1);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -150,7 +154,7 @@ public class Client {
 	private boolean receivedCorrectACK(int block) {
 		receive();
 		return Packet.isACK(receivePacket) 
-				&& Packet.getBlockNumber(receivePacket)==block;
+				&& Packet.getBlockNumber(receivePacket) == block;
 	}
 
 	/**

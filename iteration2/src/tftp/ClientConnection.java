@@ -2,6 +2,7 @@ package tftp;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.AccessDeniedException;
 
 import packet.*;
 
@@ -17,7 +18,6 @@ public class ClientConnection implements Runnable {
 	
 	/**
 	 * Constructor for class ClientConnection
-	 * @param receiveSocket		
 	 * @param receivePacket
 	 */
 	public ClientConnection(DatagramPacket receivePacket) {
@@ -99,7 +99,7 @@ public class ClientConnection implements Runnable {
 		    int chunkLen = 0;
 		    int block = 1;		    
 		    do {
-				byte[] data = new byte[Packet.DATA_PACKET_SIZE-4];
+				byte[] data = new byte[Packet.DATA_PACKET_SIZE - 4];
 				chunkLen = in.read(data);
 				Packet dataPacket = new DataPacket(block, FileHandler.trim(data), packet.getAddress(), packet.getPort());
 				send(sendReceiveSocket, dataPacket.getPacket());
@@ -133,6 +133,12 @@ public class ClientConnection implements Runnable {
 			ErrorPacket ep = new ErrorPacket(1, errMsg.getBytes(), packet.getAddress(), packet.getPort());
 			send(sendReceiveSocket, ep.getPacket());
 			System.out.println("Connection terminated!\n");
+		} catch (AccessDeniedException e) {
+			String errMsg = "Access violation on file '" + filename + "'!";
+			ErrorPacket ep = new ErrorPacket(2, errMsg.getBytes(), packet.getAddress(), packet.getPort());
+			send(sendReceiveSocket, ep.getPacket());
+			System.out.println("Connection terminated!\n");
+
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
