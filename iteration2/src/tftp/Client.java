@@ -44,7 +44,7 @@ public class Client {
 			System.out.println("Sending RRQ...");
 //			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
 			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
-			send(request);
+			send(request.getPacket());
 			receiveDataAndSendACK(filename);
 			if(rrqSuccessful) {
 				System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
@@ -69,7 +69,7 @@ public class Client {
 				fileChecked = true;
 				String errMsg = "A file named '" + filename + "' already exists in client!";
 				Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
-				send(errorPacket);
+				send(errorPacket.getPacket());
 				System.out.println("Client says: " + errMsg + "\nTerminating...\n");
 				break;
 			}
@@ -83,7 +83,7 @@ public class Client {
 			byte[] blockNum = ACKPacket.getBlock(receivePacket);
 			Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
 			System.out.println("DATA received. Sending ACK...");
-			send(ack);
+			send(ack.getPacket());
 			rrqSuccessful = true;
 			fileChecked = true;
 		} while(!DataPacket.isLastPacket(receivePacket));
@@ -98,7 +98,7 @@ public class Client {
 			System.out.println("Sending WRQ...");
 //			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
 			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
-			send(request);
+			send(request.getPacket());
 			sendData(filename);
 			System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
 		} catch (UnknownHostException e) {
@@ -130,13 +130,15 @@ public class Client {
 				byte[] content = FileHandler.trim(data);
 				breakOut = content.length < 512;
 				Packet dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
-				send(dataPacket);
+				send(dataPacket.getPacket());
 				block++;
 			} while(chunkLen != -1);
 			in.close();
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			System.exit(1);
+			String errMsg = "File '" + filename + "' does not exist!";
+			ErrorPacket ep = new ErrorPacket(1, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
+			send(ep.getPacket());
+			System.out.println("Connection terminated!\n");
 		} catch (AccessDeniedException e) {
 			System.out.println("File Access violation: " + filename );
 	    	System.exit(1);
@@ -161,12 +163,12 @@ public class Client {
 	 * Sends packet via sendReceiveSocket
 	 * @param packet
 	 */
-	public void send(Packet packet) {
+	public void send(DatagramPacket packet) {
 		try {
-			sendPacket = packet.getPacket();
+//			sendPacket = packet.getPacket();
 			System.out.println("Client says: Sending packet to host...");
-			Packet.printRequest(sendPacket);
-			sendReceiveSocket.send(sendPacket);
+			Packet.printRequest(packet);
+			sendReceiveSocket.send(packet);
 			System.out.println("Client: Packet sent.\n");
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
