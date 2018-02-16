@@ -1,5 +1,5 @@
 FILES:
-	1. /iteration1 : project folder to load via eclipse.
+	1. /iteration2 : project folder to load via eclipse.
 	2. UML_Class_Diagram.jpg : UML class diagram
 
 
