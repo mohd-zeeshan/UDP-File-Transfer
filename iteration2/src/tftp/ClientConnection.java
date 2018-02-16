@@ -103,7 +103,7 @@ public class ClientConnection implements Runnable {
 				chunkLen = in.read(data);
 				Packet dataPacket = new DataPacket(block, FileHandler.trim(data), packet.getAddress(), packet.getPort());
 				send(sendReceiveSocket, dataPacket.getPacket());
-				if(Packet.isERROR(receivePacket))
+				
 				if(FileHandler.trim(data).length < 512) {
 					break;
 				}
@@ -138,7 +138,6 @@ public class ClientConnection implements Runnable {
 			ErrorPacket ep = new ErrorPacket(2, errMsg.getBytes(), packet.getAddress(), packet.getPort());
 			send(sendReceiveSocket, ep.getPacket());
 			System.out.println("Connection terminated!\n");
-
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -180,7 +179,7 @@ public class ClientConnection implements Runnable {
 	public void run() {
 		handleRQ(receivePacket);
 		System.out.println("Enter 'exit' to shut down server OR enter 'c' to continue...");
-		System.out.print(">");
+		System.out.print("> ");
 	}
 
 }
