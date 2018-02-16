@@ -20,7 +20,7 @@ public class Client {
 	public static int CLIENT_PORT = 23;
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
-	private boolean rrqSuccessful;
+	private boolean rrqSuccessful, wrqSuccessful;
 	
 	/**
 	 * Constructor for Client class. Creates a socket for sending and receiving.
@@ -51,6 +51,7 @@ public class Client {
 			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 	
@@ -95,14 +96,21 @@ public class Client {
 	 */
 	public void write(String filename) {
 		try {
+			if(!(new File(CLIENT_PATH + filename)).exists()) {
+				System.err.println("Client: File '" + CLIENT_PATH + filename + "' does not exist.\nNot sending WRQ\nTerminating...");
+				System.exit(1);
+			}
 			System.out.println("Sending WRQ...");
 //			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
 			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
 			send(request.getPacket());
 			sendData(filename);
-			System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
+			if(wrqSuccessful) {
+				System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
+			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}
 	}
 	
@@ -118,10 +126,18 @@ public class Client {
 			int block = 0;
 			boolean breakOut = false;
 			do {
-				if(receivedCorrectACK(block)) {
-					System.out.println("Correct ACK received!\n");
-				} else {
-					System.out.println("Wrong ACK received!\n");
+				receive();
+				if(Packet.isACK(receivePacket)) {
+					if(receivedCorrectACK(block)) {
+						System.out.println("Correct ACK received!\n");
+					} else {
+						System.out.println("Wrong ACK received!\n");
+						break;
+					}
+				} else if(Packet.isERROR(receivePacket)) {
+					wrqSuccessful = false;
+					System.out.println("Client says: ERROR Packet received with message: " + new String(receivePacket.getData(), 4, receivePacket.getLength()));
+					System.out.println("Terminating...\n");
 					break;
 				}
 				if(breakOut) break;
@@ -132,13 +148,12 @@ public class Client {
 				Packet dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
 				send(dataPacket.getPacket());
 				block++;
+				wrqSuccessful = true;
 			} while(chunkLen != -1);
 			in.close();
 		} catch (FileNotFoundException e) {
-			String errMsg = "File '" + filename + "' does not exist!";
-			ErrorPacket ep = new ErrorPacket(1, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
-			send(ep.getPacket());
-			System.out.println("Connection terminated!\n");
+			e.printStackTrace();
+			System.exit(1);
 		} catch (AccessDeniedException e) {
 			System.out.println("File Access violation: " + filename );
 	    	System.exit(1);
@@ -154,9 +169,7 @@ public class Client {
 	 * @return	whether correct ACK packet received
 	 */
 	private boolean receivedCorrectACK(int block) {
-		receive();
-		return Packet.isACK(receivePacket) 
-				&& Packet.getBlockNumber(receivePacket) == block;
+		return Packet.getBlockNumber(receivePacket) == block;
 	}
 
 	/**
@@ -235,7 +248,7 @@ public class Client {
 	public static void main(String[] args) {
 		Client c = new Client();
 //		c.takeInput();
-		c.read("server_big.txt");
+		c.write("client_big.txt");
 	}
 
 }

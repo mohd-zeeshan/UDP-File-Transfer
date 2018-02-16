@@ -71,13 +71,21 @@ public class ClientConnection implements Runnable {
 	private void handleWRQ(DatagramPacket packet) {
 		int block = 0;
 		byte data[] = new byte[Packet.DATA_PACKET_SIZE];
-	    DatagramPacket aPacket = new DatagramPacket(data, data.length);
+	    DatagramPacket aPacket = new DatagramPacket(data, data.length);   
+		String filename = Server.SERVER_PATH + RequestPacket.getFilename(packet);
+		File file = new File(filename);
+		if(file.exists()) {
+			String errMsg = filename + "' already exists in server!";
+			Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), packet.getAddress(), packet.getPort());
+			send(sendReceiveSocket, errorPacket.getPacket());
+			System.out.println("Server says: " + errMsg + "\nTerminating...\n");
+		}	
 		do {
 			Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
 			send(sendReceiveSocket, ack.getPacket());
 			receive(sendReceiveSocket, aPacket);
 			byte[] content = FileHandler.trim(DataPacket.getDataFromPacket(aPacket));
-			FileHandler.writeToFile(Server.SERVER_PATH+RequestPacket.getFilename(packet), content);
+			FileHandler.writeToFile(filename, content);
 			block++;
 		} while(!DataPacket.isLastPacket(aPacket));
 		// send last ACK
