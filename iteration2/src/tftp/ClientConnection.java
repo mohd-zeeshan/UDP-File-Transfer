@@ -153,7 +153,7 @@ public class ClientConnection implements Runnable {
 			String errMsg = "File '" + filename + "' does not exist!";
 			ErrorPacket ep = new ErrorPacket(1, errMsg.getBytes(), packet.getAddress(), packet.getPort());
 			send(sendReceiveSocket, ep.getPacket());
-			System.out.println("Connection terminated!\n");
+			System.out.println(errMsg + "\nConnection terminated!\n");
 		} catch (AccessDeniedException e) {
 			String errMsg = "Access violation on file '" + filename + "'!";
 			ErrorPacket ep = new ErrorPacket(2, errMsg.getBytes(), packet.getAddress(), packet.getPort());

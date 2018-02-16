@@ -16,7 +16,7 @@ import packet.*;
 public class Client {
 	
 	private DatagramSocket sendReceiveSocket;
-	private DatagramPacket sendPacket, receivePacket;
+	private DatagramPacket  receivePacket;
 	public static int CLIENT_PORT = 23;
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
@@ -64,29 +64,40 @@ public class Client {
 	private void receiveDataAndSendACK(String filename) {
 		boolean fileChecked = false;
 		do {
-			receive();
-			File file = new File(CLIENT_PATH + filename);
-			if(!fileChecked && file.exists()) {
+			long usableSpace = new File(System.getProperty("user.dir")).getUsableSpace();
+			// If we have enough space left, go on writing to file, other wise send error packet and terminate
+			if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
+				receive();
+				File file = new File(CLIENT_PATH + filename);
+				// If file already exist, then send Error packet 6
+				if(!fileChecked && file.exists()) {
+					fileChecked = true;
+					String errMsg = "A file named '" + filename + "' already exists in client!";
+					Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
+					send(errorPacket.getPacket());
+					System.out.println("Client says: " + errMsg + "\nTerminating...\n");
+					break;
+				}
+				if(Packet.isERROR(receivePacket)) {
+					rrqSuccessful = false;
+					System.out.println("Client says: ERROR Packet received with message: " + new String(this.receivePacket.getData()));
+					System.out.println("Quiting...\n");
+					break;
+				}
+				FileHandler.writeToFile(CLIENT_PATH + filename, FileHandler.trim(DataPacket.getDataFromPacket(receivePacket)));
+				byte[] blockNum = ACKPacket.getBlock(receivePacket);
+				Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
+				System.out.println("DATA received. Sending ACK...");
+				send(ack.getPacket());
+				rrqSuccessful = true;
 				fileChecked = true;
-				String errMsg = "A file named '" + filename + "' already exists in client!";
-				Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
+			} else {
+				String errMsg = "Disk full. Only " + usableSpace + " byte space left";
+				Packet errorPacket = new ErrorPacket(3, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
 				send(errorPacket.getPacket());
 				System.out.println("Client says: " + errMsg + "\nTerminating...\n");
 				break;
 			}
-			if(Packet.isERROR(receivePacket)) {
-				rrqSuccessful = false;
-				System.out.println("Client says: ERROR Packet received with message: " + new String(this.receivePacket.getData()));
-				System.out.println("Quiting...\n");
-				break;
-			}
-			FileHandler.writeToFile(CLIENT_PATH + filename, FileHandler.trim(DataPacket.getDataFromPacket(receivePacket)));
-			byte[] blockNum = ACKPacket.getBlock(receivePacket);
-			Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
-			System.out.println("DATA received. Sending ACK...");
-			send(ack.getPacket());
-			rrqSuccessful = true;
-			fileChecked = true;
 		} while(!DataPacket.isLastPacket(receivePacket));
 	}
 	
@@ -178,7 +189,6 @@ public class Client {
 	 */
 	public void send(DatagramPacket packet) {
 		try {
-//			sendPacket = packet.getPacket();
 			System.out.println("Client says: Sending packet to host...");
 			Packet.printRequest(packet);
 			sendReceiveSocket.send(packet);
@@ -248,7 +258,7 @@ public class Client {
 	public static void main(String[] args) {
 		Client c = new Client();
 //		c.takeInput();
-		c.write("client_big.txt");
+		c.read("server_big.txt");
 	}
 
 }
