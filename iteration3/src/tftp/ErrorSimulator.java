@@ -2,6 +2,7 @@ package tftp;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.Scanner;
 
 import packet.Packet;
 import packet.RequestPacket;
@@ -20,6 +21,12 @@ public class ErrorSimulator {
 	private int clientPort;
 	private InetAddress clientAddress;
 	private InetAddress localHost;
+	
+	private Mode mode;
+	private PacketType packetType;
+	private enum Mode { NORMAL, LOSE, DELAY, DUPLICATE };
+	private int blockNumber = -1;
+	private enum PacketType { DATA, ACK };
 	
 	/**
 	 * Constructor for Host class. Creates a socket for receiving, another socket for both
@@ -137,7 +144,29 @@ public class ErrorSimulator {
 	}
 	
 	public void takeInput() {
-		printHelp();
+		Scanner in = new Scanner(System.in);
+		while(true) {
+			printHelp();
+			System.out.print("\n> ");
+			String s = in.nextLine();
+			if(s.equals("0")) {
+				this.mode = Mode.NORMAL;
+				break;
+			} else if(s.startsWith("1")) {	// lose packet
+				this.mode = Mode.LOSE;
+				String[] parts = s.split(" ");
+				this.blockNumber = Integer.parseInt(parts[1]);
+				String packetTypeStr = parts[2];
+				if(packetTypeStr.equals("DATA")) {
+					this.packetType = PacketType.DATA;
+				} else if(packetTypeStr.equals("ACK")) {
+					this.packetType = PacketType.ACK;
+				}
+				System.out.println("\n" + packetType + " packet with block #" + blockNumber + " will be lost.");
+				break;
+			}
+		}
+		in.close();
 	}
 
 	public static void main(String[] args) {
