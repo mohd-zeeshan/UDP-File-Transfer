@@ -169,13 +169,29 @@ public class ErrorSimulator {
 					sendReceiveSocket.send(sendToClientPacket);
 					System.out.println("Host: Packet sent!\n");
 					
-					// Receive from client 
+//					Receive from client 
 					data = new byte[Packet.DATA_PACKET_SIZE];
 				    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
 				    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
 			    	sendReceiveSocket.receive(receiveFromClientPacket);
 					RequestPacket.printRequest(receiveFromClientPacket);
 					System.out.println("Packet Recieved!\n");
+					
+//					Send To Server (client connection thread)
+					sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), 
+							serverThreadAddress, serverThreadPort);
+					System.out.println("ErrorSimulator says: Sending packet to server...");
+					RequestPacket.printRequest(sendToServerPacket);
+					sendReceiveSocket.send(sendToServerPacket);
+				    System.out.println("Host: Packet sent.\n");
+				    
+//				    Receive From Server
+					data = new byte[Packet.DATA_PACKET_SIZE];
+				    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
+				    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
+			    	sendReceiveSocket.receive(receiveFromServerPacket);
+				    RequestPacket.printRequest(receiveFromServerPacket);
+				    System.out.println("Packet Recieved!\n");
 					
 			    }
 			} catch (IOException e) {
