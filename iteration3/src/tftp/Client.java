@@ -232,11 +232,11 @@ public class Client {
 			System.out.println("    1 : To read from server");
 			System.out.println("    2 : To write to server");
 			System.out.println("    exit : To shut down client");
-			System.out.print(">");
+			System.out.print("> ");
 			String s = in.nextLine();
 			if(s.equals("1")) {
 				System.out.println("Enter the filename you want to read from: ");
-				System.out.print(">");
+				System.out.print("> ");
 				String filename = in.nextLine();
 				System.out.println("Reading " + filename + " from server...");
 				read(filename);
@@ -244,7 +244,7 @@ public class Client {
 				System.out.println("Enter the filename you want to write: ");
 				String filename = in.nextLine();
 				System.out.println("Writing " + filename + " to server...");
-				System.out.print(">");
+				System.out.print("> ");
 				write(filename);
 			} else if(s.equals("exit")) {
 				System.out.println("Shutting down client!");
@@ -258,7 +258,8 @@ public class Client {
 	public static void main(String[] args) {
 		Client c = new Client();
 //		c.takeInput();
-		c.read("server_big.txt");
+//		c.read("server_big.txt");
+		c.write("client_big.txt");
 	}
 
 }

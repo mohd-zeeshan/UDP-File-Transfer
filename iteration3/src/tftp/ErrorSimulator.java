@@ -19,6 +19,7 @@ public class ErrorSimulator {
 							receiveFromServerPacket, sendToClientPacket;
 	private int clientPort;
 	private InetAddress clientAddress;
+	private InetAddress localHost;
 	
 	/**
 	 * Constructor for Host class. Creates a socket for receiving, another socket for both
@@ -29,90 +30,32 @@ public class ErrorSimulator {
 		try {
 			receiveSocket = new DatagramSocket(Client.CLIENT_PORT);
 			sendReceiveSocket = new DatagramSocket();
+			localHost = InetAddress.getLocalHost();
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
-		}
-	}
-	
-	/**
-	 * Waits to receive a request and prints out the information it has received
-	 * from the client.
-	 * 
-	 */
-	private void receiveFromClient() {
-	    try {
-			byte data[] = new byte[Packet.DATA_PACKET_SIZE];
-		    receiveFromClientPacket = new DatagramPacket(data, data.length);
-		    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
-	    	receiveSocket.receive(receiveFromClientPacket);
-			clientPort = receiveFromClientPacket.getPort();
-			clientAddress = receiveFromClientPacket.getAddress();
-			RequestPacket.printRequest(receiveFromClientPacket);
-			sendToServer(receiveFromClientPacket);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-	}
-	
-	/**
-	 * Forms a packet to send containing exactly what it received, sends it to server
-	 * and prints the info.
-	 * 
-	 * @param packet	byte[] received from client
-	 */
-	private void sendToServer(DatagramPacket packet) {
-		try {
-			sendToServerPacket = new DatagramPacket(packet.getData(), packet.getLength(), InetAddress.getLocalHost(), Server.SERVER_PORT);
-			System.out.println("ErrorSimulator says: Sending packet to server...");
-			RequestPacket.printRequest(sendToServerPacket);
-			sendReceiveSocket.send(sendToServerPacket);
-		    System.out.println("Host: Packet sent.\n");
-		    receiveFromServer();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			System.exit(1);
-		} catch (IOException e) {
-			e.printStackTrace();
-	        System.exit(1);
-	    }
+		}
 	}
 	
-	/**
-	 * Waits to receive a request and prints out the information it has received from server.
-	 */
-	private void receiveFromServer() {
-	    try {
-			byte data[] = new byte[Packet.DATA_PACKET_SIZE];
-		    receiveFromServerPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), Server.SERVER_PORT);
-		    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
-	    	sendReceiveSocket.receive(receiveFromServerPacket);
-		    RequestPacket.printRequest(receiveFromServerPacket);
-		    System.out.println("Packet Recieved!\n");
-		    sendToClient(receiveFromServerPacket);
-    	} catch (IOException e) {
-	    	e.printStackTrace();
-	    	System.exit(1);
-    	}
-	}
-	
-	/**
-	 * Forms a packet to send containing exactly what it received, sends it back to client
-	 * and prints the info.
-	 * 
-	 * @param packet		Packet received from server
-	 */
-	private void sendToClient(DatagramPacket packet) {
+	private void send(DatagramSocket socket, DatagramPacket packet) {
 		try {
-			sendToClientPacket = new DatagramPacket(packet.getData(), packet.getLength(), clientAddress, clientPort);	
-			System.out.println("ErrorSimulator says: Sending packet to client...");
-			RequestPacket.printRequest(sendToClientPacket);
-			sendReceiveSocket.send(sendToClientPacket);
-			System.out.println("Host: Packet sent!\n");
-		} catch (SocketException e) {
+			socket.send(packet);
+			RequestPacket.printRequest(packet);
+			System.out.println("Host: Packet sent.\n");
+		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
+		}
+	}
+	
+	private void receive(DatagramSocket socket, DatagramPacket packet) {
+		try {
+			socket.receive(packet);
+			RequestPacket.printRequest(packet);
+			System.out.println("Packet Recieved!\n");
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -120,91 +63,87 @@ public class ErrorSimulator {
 	}
 	
 	/**
-	 * Loops infinitely and calls receiveFromClient Method.
+	 * Transfer RRQ or WRQ between client and server (port 69)
 	 */
-	public void receiveAndSend() {
-		while(true) {
-			receiveFromClient();
-		}
+	private void transferRQ() {
+		// Receive from client 
+		byte data[] = new byte[Packet.DATA_PACKET_SIZE];
+	    receiveFromClientPacket = new DatagramPacket(data, data.length);
+	    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
+    	receive(receiveSocket, receiveFromClientPacket);
+		clientPort = receiveFromClientPacket.getPort();
+		clientAddress = receiveFromClientPacket.getAddress();
+
+		// Send To Server (69)
+		sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), localHost, Server.SERVER_PORT);
+		System.out.println("ErrorSimulator says: Sending packet to server...");
+		send(sendReceiveSocket, sendToServerPacket);
+
+		// Receive From Server
+		data = new byte[Packet.DATA_PACKET_SIZE];
+	    receiveFromServerPacket = new DatagramPacket(data, data.length, localHost, Server.SERVER_PORT);
+	    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
+    	receive(sendReceiveSocket, receiveFromServerPacket);
 	}
 	
 	public void simulateErrors() {
 		while(true) {
-			try {
+		    transferRQ();
+		    int serverThreadPort = receiveFromServerPacket.getPort();
+			InetAddress serverThreadAddress = receiveFromServerPacket.getAddress();
+		    
+		    while(true) {
+		    	// Send To Client
+				sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
+				System.out.println("ErrorSimulator says: Sending packet to client...");
+				send(sendReceiveSocket, sendToClientPacket);
+
 				// Receive from client 
 				byte data[] = new byte[Packet.DATA_PACKET_SIZE];
-			    receiveFromClientPacket = new DatagramPacket(data, data.length);
+			    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
 			    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
-		    	receiveSocket.receive(receiveFromClientPacket);
-				clientPort = receiveFromClientPacket.getPort();
-				clientAddress = receiveFromClientPacket.getAddress();
-				RequestPacket.printRequest(receiveFromClientPacket);
-				System.out.println("Packet Recieved!\n");
-				
-//				Send To Server (69)
-				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), 
-						InetAddress.getLocalHost(), Server.SERVER_PORT);
+		    	receive(sendReceiveSocket, receiveFromClientPacket);
+
+		    	// Send To Server (client connection thread)
+				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
 				System.out.println("ErrorSimulator says: Sending packet to server...");
-				RequestPacket.printRequest(sendToServerPacket);
-				sendReceiveSocket.send(sendToServerPacket);
-			    System.out.println("Host: Packet sent.\n");
-			    
-//			    Receive From Server
+				send(sendReceiveSocket, sendToServerPacket);
+
+				// Receive From Server (client connection thread)
 				data = new byte[Packet.DATA_PACKET_SIZE];
-			    receiveFromServerPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), Server.SERVER_PORT);
+			    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
 			    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
-		    	sendReceiveSocket.receive(receiveFromServerPacket);
-			    RequestPacket.printRequest(receiveFromServerPacket);
-			    System.out.println("Packet Recieved!\n");
-			    
-			    int serverThreadPort = receiveFromServerPacket.getPort();
-				InetAddress serverThreadAddress = receiveFromServerPacket.getAddress();
-			    
-			    while(true) {
-//				    Send To Client
-					sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), 
-							clientAddress, clientPort);	
-					System.out.println("ErrorSimulator says: Sending packet to client...");
-					RequestPacket.printRequest(sendToClientPacket);
-					sendReceiveSocket.send(sendToClientPacket);
-					System.out.println("Host: Packet sent!\n");
-					
-//					Receive from client 
-					data = new byte[Packet.DATA_PACKET_SIZE];
-				    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
-				    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
-			    	sendReceiveSocket.receive(receiveFromClientPacket);
-					RequestPacket.printRequest(receiveFromClientPacket);
-					System.out.println("Packet Recieved!\n");
-					
-//					Send To Server (client connection thread)
-					sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), 
-							serverThreadAddress, serverThreadPort);
-					System.out.println("ErrorSimulator says: Sending packet to server...");
-					RequestPacket.printRequest(sendToServerPacket);
-					sendReceiveSocket.send(sendToServerPacket);
-				    System.out.println("Host: Packet sent.\n");
-				    
-//				    Receive From Server
-					data = new byte[Packet.DATA_PACKET_SIZE];
-				    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
-				    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
-			    	sendReceiveSocket.receive(receiveFromServerPacket);
-				    RequestPacket.printRequest(receiveFromServerPacket);
-				    System.out.println("Packet Recieved!\n");
-					
-			    }
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
+		    	receive(sendReceiveSocket, receiveFromServerPacket);
+				
+		    }
 		}
+	}
+	
+	private void printHelp() {
+		System.out.println("Usage:");
+		System.out.println("  - Normal Operation:\n      0 ");
+		
+		System.out.println("\n  - Lose a packet:");
+		System.out.println("      1 [Block #] [DATA or ACK]");
+		System.out.println("        e.g. '1 2 DATA', '1 3 ACK' etc.");
+		
+		System.out.println("\n  - Delay a packet:");
+		System.out.println("      2 [Block #] [DATA or ACK]");
+		System.out.println("        e.g. '2 2 DATA', '2 3 ACK' etc.");
+		
+		System.out.println("\n  - Duplicate a packet:");
+		System.out.println("      3 [Block #] [DATA or ACK]");
+		System.out.println("        e.g. '3 2 DATA', '3 3 ACK' etc.");
+	}
+	
+	public void takeInput() {
+		printHelp();
 	}
 
 	public static void main(String[] args) {
 		ErrorSimulator h = new ErrorSimulator();
-//		h.receiveAndSend();
-		h.simulateErrors();
+//		h.simulateErrors();
+		h.takeInput();
 	}
 
 }
