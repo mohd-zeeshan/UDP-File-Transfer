@@ -42,8 +42,8 @@ public class Client {
 	public void read(String filename) {
 		try {
 			System.out.println("Sending RRQ...");
-//			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
-			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
+			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
+//			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
 			send(request.getPacket());
 			receiveDataAndSendACK(filename);
 			if(rrqSuccessful) {
@@ -112,8 +112,8 @@ public class Client {
 				System.exit(1);
 			}
 			System.out.println("Sending WRQ...");
-//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
-			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
+			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
+//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
 			send(request.getPacket());
 			sendData(filename);
 			if(wrqSuccessful) {
@@ -257,7 +257,8 @@ public class Client {
 		
 	public static void main(String[] args) {
 		Client c = new Client();
-		c.takeInput();
+//		c.takeInput();
+		c.read("server_big.txt");
 	}
 
 }
