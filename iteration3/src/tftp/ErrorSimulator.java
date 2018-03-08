@@ -106,7 +106,7 @@ public class ErrorSimulator {
 				send(sendReceiveSocket, sendToClientPacket);
 
 				// Receive from client 
-				byte data[] = new byte[Packet.DATA_PACKET_SIZE];
+				byte[] data = new byte[Packet.DATA_PACKET_SIZE];
 			    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
 			    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
 		    	receive(sendReceiveSocket, receiveFromClientPacket);
@@ -114,7 +114,18 @@ public class ErrorSimulator {
 		    	// Send To Server (client connection thread)
 				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
 				System.out.println("ErrorSimulator says: Sending packet to server...");
-				send(sendReceiveSocket, sendToServerPacket);
+				if(this.mode == Mode.LOSE && this.packetType == PacketType.DATA 
+						&& Packet.isDATA(sendToServerPacket)
+			    		&& Packet.getBlockNumber(sendToServerPacket) == this.blockNumber) {
+			    	System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to server!\n");
+					// Receive from client 
+					data = new byte[Packet.DATA_PACKET_SIZE];
+				    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
+				    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
+			    	receive(sendReceiveSocket, receiveFromClientPacket);
+			    } else {
+			    	send(sendReceiveSocket, sendToServerPacket);
+			    }
 
 				// Receive From Server (client connection thread)
 				data = new byte[Packet.DATA_PACKET_SIZE];
@@ -143,6 +154,19 @@ public class ErrorSimulator {
 		System.out.println("        e.g. '3 2 DATA', '3 3 ACK' etc.");
 	}
 	
+	private void handleLostPacket(String input) {
+		this.mode = Mode.LOSE;
+		String[] parts = input.split(" ");
+		this.blockNumber = Integer.parseInt(parts[1]);
+		String packetTypeStr = parts[2];
+		if(packetTypeStr.equals("DATA")) {
+			this.packetType = PacketType.DATA;
+		} else if(packetTypeStr.equals("ACK")) {
+			this.packetType = PacketType.ACK;
+		}
+		System.out.println("\n" + packetType + " packet with block #" + blockNumber + " will be lost.\n");
+	}
+	
 	public void takeInput() {
 		Scanner in = new Scanner(System.in);
 		while(true) {
@@ -153,19 +177,11 @@ public class ErrorSimulator {
 				this.mode = Mode.NORMAL;
 				break;
 			} else if(s.startsWith("1")) {	// lose packet
-				this.mode = Mode.LOSE;
-				String[] parts = s.split(" ");
-				this.blockNumber = Integer.parseInt(parts[1]);
-				String packetTypeStr = parts[2];
-				if(packetTypeStr.equals("DATA")) {
-					this.packetType = PacketType.DATA;
-				} else if(packetTypeStr.equals("ACK")) {
-					this.packetType = PacketType.ACK;
-				}
-				System.out.println("\n" + packetType + " packet with block #" + blockNumber + " will be lost.");
+				handleLostPacket(s);
 				break;
 			}
 		}
+		simulateErrors();
 		in.close();
 	}
 

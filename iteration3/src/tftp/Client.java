@@ -29,6 +29,7 @@ public class Client {
 		rrqSuccessful = false;
 		try {
 			sendReceiveSocket = new DatagramSocket();
+			sendReceiveSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
@@ -130,14 +131,23 @@ public class Client {
 	 * @param filename
 	 */
 	private void sendData(String filename) {
+		Packet dataPacket = null;
 	    try {
 			File file = new File(CLIENT_PATH + filename);
 			FileInputStream in = new FileInputStream(file);
 			int chunkLen = 0;
 			int block = 0;
-			boolean breakOut = false;
+			boolean breakOut = false;	
 			do {
-				receive();
+				// Receive data
+				byte[] data = new byte[Packet.DATA_PACKET_SIZE];
+				receivePacket = new DatagramPacket(data, data.length);
+			    System.out.println("Client says: Waiting for Packet from host...");
+				sendReceiveSocket.receive(receivePacket);
+				Packet.printRequest(receivePacket);
+				System.out.println("Packet Recieved!\n");
+				
+				
 				if(Packet.isACK(receivePacket)) {
 					if(receivedCorrectACK(block)) {
 						System.out.println("Correct ACK received!\n");
@@ -152,16 +162,19 @@ public class Client {
 					break;
 				}
 				if(breakOut) break;
-				byte[] data = new byte[Packet.DATA_PACKET_SIZE - 4];
+				data = new byte[Packet.DATA_PACKET_SIZE - 4];
 				chunkLen = in.read(data);
 				byte[] content = FileHandler.trim(data);
 				breakOut = content.length < 512;
-				Packet dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
+				dataPacket = new DataPacket(block, content, receivePacket.getAddress(), receivePacket.getPort());
 				send(dataPacket.getPacket());
 				block++;
 				wrqSuccessful = true;
 			} while(chunkLen != -1);
 			in.close();
+		} catch (SocketTimeoutException e) {
+			wrqSuccessful = false;
+			send(dataPacket.getPacket());
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);
