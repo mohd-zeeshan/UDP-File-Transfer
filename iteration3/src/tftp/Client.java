@@ -146,7 +146,7 @@ public class Client {
 			    try {
 			    	sendReceiveSocket.receive(receivePacket);
 			    } catch (SocketTimeoutException e) {
-			    	System.out.println("\n*** Timeout of 5 seconds occured ***\nSending again!\n");
+			    	System.out.println("\n*** Timeout of 5 seconds occured ***\nRE_TRANSMITTING...Sending again!\n");
 					send(dataPacket.getPacket());
 					sendReceiveSocket.receive(receivePacket);
 				}

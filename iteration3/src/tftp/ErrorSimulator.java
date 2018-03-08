@@ -99,6 +99,17 @@ public class ErrorSimulator {
 	    		&& Packet.getBlockNumber(sendToServerPacket) == this.blockNumber;
 	}
 	
+	private boolean isACKPacketLoseMode() {
+		return this.mode == Mode.LOSE && this.packetType == PacketType.ACK 
+				&& Packet.isACK(sendToClientPacket)
+	    		&& Packet.getBlockNumber(sendToClientPacket) == this.blockNumber;
+	}
+	
+	/**
+	 * Handles lost data packets (see lecture slide "The TFTP Protocol: Part 2", page 24 timing diagram)
+	 * @param serverThreadAddress
+	 * @param serverThreadPort
+	 */
 	private void handleLoseDataPacketMode(InetAddress serverThreadAddress, int serverThreadPort) {
 		System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to server!\n");
 		// Receive from client 
@@ -112,6 +123,9 @@ public class ErrorSimulator {
     	send(sendReceiveSocket, sendToServerPacket);
 	}
 	
+	/**
+	 * Simulates errors based on the mode selected by user.
+	 */
 	public void simulateErrors() {
 		while(true) {
 		    transferRQ();
@@ -122,7 +136,20 @@ public class ErrorSimulator {
 		    	// Send To Client
 				sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
 				System.out.println("ErrorSimulator says: Sending packet to client...");
-				send(sendReceiveSocket, sendToClientPacket);
+				if(isACKPacketLoseMode()) {
+					System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to client!\n");
+					// Receive From Server (client connection thread)
+					byte[] data = new byte[Packet.DATA_PACKET_SIZE];
+				    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
+				    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
+			    	receive(sendReceiveSocket, receiveFromServerPacket);
+			    	// Send To Client
+					sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
+					System.out.println("ErrorSimulator says: Sending packet to client...");
+					send(sendReceiveSocket, sendToClientPacket);
+				} else {
+					send(sendReceiveSocket, sendToClientPacket);
+				}
 
 				// Receive from client 
 				byte[] data = new byte[Packet.DATA_PACKET_SIZE];
