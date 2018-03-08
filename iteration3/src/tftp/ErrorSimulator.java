@@ -123,6 +123,19 @@ public class ErrorSimulator {
     	send(sendReceiveSocket, sendToServerPacket);
 	}
 	
+	private void handleLoseACKPacketMode(int serverThreadPort, InetAddress serverThreadAddress) {
+		System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to client!\n");
+		// Receive From Server (client connection thread)
+		byte[] data = new byte[Packet.DATA_PACKET_SIZE];
+		receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
+		System.out.println("ErrorSimulator says: Waiting for Packet from server...");
+		receive(sendReceiveSocket, receiveFromServerPacket);
+		// Send To Client
+		sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
+		System.out.println("ErrorSimulator says: Sending packet to client...");
+		send(sendReceiveSocket, sendToClientPacket);
+	}
+	
 	/**
 	 * Simulates errors based on the mode selected by user.
 	 */
@@ -137,16 +150,7 @@ public class ErrorSimulator {
 				sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
 				System.out.println("ErrorSimulator says: Sending packet to client...");
 				if(isACKPacketLoseMode()) {
-					System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to client!\n");
-					// Receive From Server (client connection thread)
-					byte[] data = new byte[Packet.DATA_PACKET_SIZE];
-				    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
-				    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
-			    	receive(sendReceiveSocket, receiveFromServerPacket);
-			    	// Send To Client
-					sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
-					System.out.println("ErrorSimulator says: Sending packet to client...");
-					send(sendReceiveSocket, sendToClientPacket);
+					handleLoseACKPacketMode(serverThreadPort, serverThreadAddress);
 				} else {
 					send(sendReceiveSocket, sendToClientPacket);
 				}
@@ -203,7 +207,7 @@ public class ErrorSimulator {
 		} else if(packetTypeStr.equals("ACK")) {
 			this.packetType = PacketType.ACK;
 		}
-		System.out.println("\n" + packetType + " packet with block #" + blockNumber + " will be lost.\n");
+		System.out.println("\nLOSE A PACKET: " + packetType + " packet with block #" + blockNumber + " will be lost.\n");
 	}
 	
 	public void takeInput() {
