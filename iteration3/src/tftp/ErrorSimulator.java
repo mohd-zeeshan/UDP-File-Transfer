@@ -93,13 +93,13 @@ public class ErrorSimulator {
     	receive(sendReceiveSocket, receiveFromServerPacket);
 	}
 	
-	private boolean isDataPacketLoseMode() {
+	private boolean isLoseDataPacketMode() {
 		return this.mode == Mode.LOSE && this.packetType == PacketType.DATA 
 				&& Packet.isDATA(sendToServerPacket)
 	    		&& Packet.getBlockNumber(sendToServerPacket) == this.blockNumber;
 	}
 	
-	private boolean isACKPacketLoseMode() {
+	private boolean isLoseACKPacketMode() {
 		return this.mode == Mode.LOSE && this.packetType == PacketType.ACK 
 				&& Packet.isACK(sendToClientPacket)
 	    		&& Packet.getBlockNumber(sendToClientPacket) == this.blockNumber;
@@ -149,7 +149,7 @@ public class ErrorSimulator {
 		    	// Send To Client
 				sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
 				System.out.println("ErrorSimulator says: Sending packet to client...");
-				if(isACKPacketLoseMode()) {
+				if(isLoseACKPacketMode()) {
 					handleLoseACKPacketMode(serverThreadPort, serverThreadAddress);
 				} else {
 					send(sendReceiveSocket, sendToClientPacket);
@@ -164,7 +164,7 @@ public class ErrorSimulator {
 		    	// Send To Server (client connection thread)
 				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
 				System.out.println("ErrorSimulator says: Sending packet to server...");
-				if(isDataPacketLoseMode()) {
+				if(isLoseDataPacketMode()) {
 					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
 			    } else {
 			    	send(sendReceiveSocket, sendToServerPacket);
