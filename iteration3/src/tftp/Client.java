@@ -131,19 +131,25 @@ public class Client {
 	 * @param filename
 	 */
 	private void sendData(String filename) {
-		Packet dataPacket = null;
 	    try {
 			File file = new File(CLIENT_PATH + filename);
 			FileInputStream in = new FileInputStream(file);
 			int chunkLen = 0;
 			int block = 0;
-			boolean breakOut = false;	
+			boolean breakOut = false;
+			Packet dataPacket = null;
 			do {
 				// Receive data
 				byte[] data = new byte[Packet.DATA_PACKET_SIZE];
 				receivePacket = new DatagramPacket(data, data.length);
 			    System.out.println("Client says: Waiting for Packet from host...");
-				sendReceiveSocket.receive(receivePacket);
+			    try {
+			    	sendReceiveSocket.receive(receivePacket);
+			    } catch (SocketTimeoutException e) {
+			    	System.out.println("\n*** Timeout of 5 seconds occured ***\nSending again!\n");
+					send(dataPacket.getPacket());
+					sendReceiveSocket.receive(receivePacket);
+				}
 				Packet.printRequest(receivePacket);
 				System.out.println("Packet Recieved!\n");
 				
@@ -172,9 +178,6 @@ public class Client {
 				wrqSuccessful = true;
 			} while(chunkLen != -1);
 			in.close();
-		} catch (SocketTimeoutException e) {
-			wrqSuccessful = false;
-			send(dataPacket.getPacket());
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			System.exit(1);

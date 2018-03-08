@@ -93,6 +93,25 @@ public class ErrorSimulator {
     	receive(sendReceiveSocket, receiveFromServerPacket);
 	}
 	
+	private boolean isDataPacketLoseMode() {
+		return this.mode == Mode.LOSE && this.packetType == PacketType.DATA 
+				&& Packet.isDATA(sendToServerPacket)
+	    		&& Packet.getBlockNumber(sendToServerPacket) == this.blockNumber;
+	}
+	
+	private void handleLoseDataPacketMode(InetAddress serverThreadAddress, int serverThreadPort) {
+		System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to server!\n");
+		// Receive from client 
+		byte[] data = new byte[Packet.DATA_PACKET_SIZE];
+	    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
+	    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
+    	receive(sendReceiveSocket, receiveFromClientPacket);
+    	// Send To Server (client connection thread)
+		sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
+		System.out.println("ErrorSimulator says: Sending packet to server...");
+    	send(sendReceiveSocket, sendToServerPacket);
+	}
+	
 	public void simulateErrors() {
 		while(true) {
 		    transferRQ();
@@ -114,15 +133,8 @@ public class ErrorSimulator {
 		    	// Send To Server (client connection thread)
 				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
 				System.out.println("ErrorSimulator says: Sending packet to server...");
-				if(this.mode == Mode.LOSE && this.packetType == PacketType.DATA 
-						&& Packet.isDATA(sendToServerPacket)
-			    		&& Packet.getBlockNumber(sendToServerPacket) == this.blockNumber) {
-			    	System.out.println("\nNot sending " + packetType + " packet with block #" + blockNumber + " to server!\n");
-					// Receive from client 
-					data = new byte[Packet.DATA_PACKET_SIZE];
-				    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
-				    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
-			    	receive(sendReceiveSocket, receiveFromClientPacket);
+				if(isDataPacketLoseMode()) {
+					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
 			    } else {
 			    	send(sendReceiveSocket, sendToServerPacket);
 			    }
@@ -154,7 +166,7 @@ public class ErrorSimulator {
 		System.out.println("        e.g. '3 2 DATA', '3 3 ACK' etc.");
 	}
 	
-	private void handleLostPacket(String input) {
+	private void handleLosePacketInput(String input) {
 		this.mode = Mode.LOSE;
 		String[] parts = input.split(" ");
 		this.blockNumber = Integer.parseInt(parts[1]);
@@ -177,7 +189,7 @@ public class ErrorSimulator {
 				this.mode = Mode.NORMAL;
 				break;
 			} else if(s.startsWith("1")) {	// lose packet
-				handleLostPacket(s);
+				handleLosePacketInput(s);
 				break;
 			}
 		}
