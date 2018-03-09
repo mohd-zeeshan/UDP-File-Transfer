@@ -115,6 +115,7 @@ public class ClientConnection implements Runnable {
 	 */
 	private void handleRRQ(DatagramPacket packet) {
 		String filename = Server.SERVER_PATH + RequestPacket.getFilename(packet);
+		boolean receiveLastACK = true;
 		try {
 		    File file = new File(filename);
 		    FileInputStream in = new FileInputStream(file);
@@ -132,7 +133,6 @@ public class ClientConnection implements Runnable {
 				
 				byte receivedData[] = new byte[500];
 			    DatagramPacket dp = new DatagramPacket(receivedData, receivedData.length);
-//				receive(sendReceiveSocket, dp);
 			    
 			    System.out.println("Server says: Waiting for Packet from host...");
 			    try {
@@ -150,6 +150,7 @@ public class ClientConnection implements Runnable {
 						System.out.println("Correct ACK received!\n");
 					} else {
 						System.out.println("Wrong ACK received!\n");
+						receiveLastACK = false;
 						break;
 					}
 				} else if(Packet.isERROR(dp)) {
@@ -159,7 +160,7 @@ public class ClientConnection implements Runnable {
 				}
 				block++;
 		    } while (chunkLen != -1);
-		    receiveACK(block);		// receive the last ACK
+		    if(receiveLastACK) receiveACK(block);		// receive the last ACK
 		    in.close();
 		} catch (FileNotFoundException e) {
 			String errMsg = "File '" + filename + "' does not exist!";

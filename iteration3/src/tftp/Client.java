@@ -50,6 +50,10 @@ public class Client {
 			receiveDataAndSendACK(filename);
 			if(rrqSuccessful) {
 				System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
+			} else {
+				System.out.println("File read failed!");
+				File file = new File(CLIENT_PATH + filename);
+				if(file.exists()) file.delete();
 			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -70,6 +74,10 @@ public class Client {
 			// If we have enough space left, go on writing to file, other wise send error packet and terminate
 			if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
 				receive(rrqSocket);
+				if(!Packet.isDATA(receivePacket)) {
+					rrqSuccessful = false;
+					break;
+				}
 				File file = new File(CLIENT_PATH + filename);
 				// If file already exist, then send Error packet 6
 				if(!fileChecked && file.exists()) {
@@ -284,8 +292,8 @@ public class Client {
 	public static void main(String[] args) {
 		Client c = new Client();
 //		c.takeInput();
-		c.read("server_big.txt");
-//		c.write("client_big.txt");
+//		c.read("server_big.txt");
+		c.write("client_big.txt");
 	}
 
 }

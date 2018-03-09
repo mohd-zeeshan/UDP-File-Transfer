@@ -106,6 +106,18 @@ public class ErrorSimulator {
 	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
 	}
 	
+	private boolean isDelayDataPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.DELAY && this.packetType == PacketType.DATA 
+				&& Packet.isDATA(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
+	private boolean isDelayACKPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.DELAY && this.packetType == PacketType.ACK 
+				&& Packet.isACK(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
 	/**
 	 * Handles lost data packets (see lecture slide "The TFTP Protocol: Part 2", page 24 timing diagram)
 	 * @param serverThreadAddress
@@ -152,6 +164,9 @@ public class ErrorSimulator {
 				System.out.println("ErrorSimulator says: Sending packet to client...");
 				if(isLoseACKPacketMode(sendToClientPacket) || isLoseDataPacketMode(sendToClientPacket)) {
 					handleLoseACKPacketMode(serverThreadPort, serverThreadAddress);
+				} else if(isDelayACKPacketMode(sendToClientPacket) || isDelayDataPacketMode(sendToClientPacket)) {
+					sleep(this.delayedTime);
+					send(sendReceiveSocket, sendToClientPacket);
 				} else {
 					send(sendReceiveSocket, sendToClientPacket);
 				}
@@ -167,6 +182,9 @@ public class ErrorSimulator {
 				System.out.println("ErrorSimulator says: Sending packet to server...");
 				if(isLoseDataPacketMode(sendToServerPacket) || isLoseACKPacketMode(sendToServerPacket)) {
 					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
+			    } else if(isDelayDataPacketMode(sendToServerPacket) || isDelayACKPacketMode(sendToServerPacket)) {
+			    	sleep(this.delayedTime);
+			    	send(sendReceiveSocket, sendToServerPacket);
 			    } else {
 			    	send(sendReceiveSocket, sendToServerPacket);
 			    }
@@ -180,7 +198,15 @@ public class ErrorSimulator {
 		    }
 		}
 	}
-	
+
+	private void sleep(int time) {
+		try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
 	private void printHelp() {
 		System.out.println("Usage:");
 		System.out.println("  - Normal Operation:\n      0 ");
