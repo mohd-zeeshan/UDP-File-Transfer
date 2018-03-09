@@ -1,7 +1,7 @@
 FILES:
 	1. L3G1_project_it3.zip : Archive File of the project to load via eclipse.
 	2. Diagrams.pdf : Documentations (UML class, UCM, timing diagrams)
-    3. Setup Instructions.pdf : Detailed set up instructions
+	3. Setup Instructions.pdf : Detailed set up instructions
 
 
 SETUP INSTRUCTIONS:
