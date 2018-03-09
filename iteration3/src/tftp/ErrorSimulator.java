@@ -164,10 +164,8 @@ public class ErrorSimulator {
 		    	// Send To Server (client connection thread)
 				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
 				System.out.println("ErrorSimulator says: Sending packet to server...");
-				if(isLoseDataPacketMode(sendToServerPacket)) {
+				if(isLoseDataPacketMode(sendToServerPacket) || isLoseACKPacketMode(sendToServerPacket)) {
 					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
-			    } else if(isLoseACKPacketMode(sendToServerPacket)) {
-			    	handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
 			    } else {
 			    	send(sendReceiveSocket, sendToServerPacket);
 			    }
