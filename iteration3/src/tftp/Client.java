@@ -15,7 +15,7 @@ import packet.*;
  */
 public class Client {
 	
-	private DatagramSocket sendReceiveSocket;
+	private DatagramSocket sendReceiveSocket, rrqSocket;
 	private DatagramPacket  receivePacket;
 	public static int CLIENT_PORT = 23;
 	private static final String CLIENT_PATH = "test_files/client/";
@@ -29,6 +29,7 @@ public class Client {
 		rrqSuccessful = false;
 		try {
 			sendReceiveSocket = new DatagramSocket();
+			rrqSocket = new DatagramSocket();
 			sendReceiveSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -45,7 +46,7 @@ public class Client {
 			System.out.println("Sending RRQ...");
 			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
 //			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
-			send(request.getPacket());
+			send(rrqSocket, request.getPacket());
 			receiveDataAndSendACK(filename);
 			if(rrqSuccessful) {
 				System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
@@ -68,14 +69,14 @@ public class Client {
 			long usableSpace = new File(System.getProperty("user.dir")).getUsableSpace();
 			// If we have enough space left, go on writing to file, other wise send error packet and terminate
 			if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
-				receive();
+				receive(rrqSocket);
 				File file = new File(CLIENT_PATH + filename);
 				// If file already exist, then send Error packet 6
 				if(!fileChecked && file.exists()) {
 					fileChecked = true;
 					String errMsg = "A file named '" + filename + "' already exists in client!";
 					Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
-					send(errorPacket.getPacket());
+					send(rrqSocket, errorPacket.getPacket());
 					System.out.println("Client says: " + errMsg + "\nTerminating...\n");
 					break;
 				}
@@ -89,13 +90,13 @@ public class Client {
 				byte[] blockNum = ACKPacket.getBlock(receivePacket);
 				Packet ack = new ACKPacket(blockNum, receivePacket.getAddress(), receivePacket.getPort());
 				System.out.println("DATA received. Sending ACK...");
-				send(ack.getPacket());
+				send(rrqSocket, ack.getPacket());
 				rrqSuccessful = true;
 				fileChecked = true;
 			} else {
 				String errMsg = "Disk full. Only " + usableSpace + " byte space left";
 				Packet errorPacket = new ErrorPacket(3, errMsg.getBytes(), receivePacket.getAddress(), receivePacket.getPort());
-				send(errorPacket.getPacket());
+				send(rrqSocket, errorPacket.getPacket());
 				System.out.println("Client says: " + errMsg + "\nTerminating...\n");
 				break;
 			}
@@ -203,11 +204,11 @@ public class Client {
 	 * Sends packet via sendReceiveSocket
 	 * @param packet
 	 */
-	public void send(DatagramPacket packet) {
+	private void send(DatagramSocket socket, DatagramPacket packet) {
 		try {
 			System.out.println("Client says: Sending packet to host...");
 			Packet.printRequest(packet);
-			sendReceiveSocket.send(packet);
+			socket.send(packet);
 			System.out.println("Client: Packet sent.\n");
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
@@ -218,17 +219,21 @@ public class Client {
 		}	
 	}
 	
+	private void send(DatagramPacket packet) {
+		send(this.sendReceiveSocket, packet);
+	}
+	
 	/**
 	 * Waits on its DatagramSocket. When it receives a DatagramPacket from the intermediate host, 
 	 * it prints out the information received, including the byte array.
 	 * 
 	 */
-	private void receive() {
+	private void receive(DatagramSocket socket) {
 	    try {
 			byte[] data = new byte[Packet.DATA_PACKET_SIZE];
 			receivePacket = new DatagramPacket(data, data.length);
 		    System.out.println("Client says: Waiting for Packet from host...");
-			sendReceiveSocket.receive(receivePacket);
+			socket.receive(receivePacket);
 			Packet.printRequest(receivePacket);
 			System.out.println("Packet Recieved!\n");
 	    } catch (IOException e) {
@@ -274,8 +279,8 @@ public class Client {
 	public static void main(String[] args) {
 		Client c = new Client();
 //		c.takeInput();
-//		c.read("server_big.txt");
-		c.write("client_big.txt");
+		c.read("server_big.txt");
+//		c.write("client_big.txt");
 	}
 
 }

@@ -14,7 +14,7 @@ import packet.*;
 public class ClientConnection implements Runnable {
 
 	private DatagramPacket receivePacket;
-	private DatagramSocket sendReceiveSocket, sendReceiveSocket1;
+	private DatagramSocket sendReceiveSocket, wrqSocket;
 	
 	/**
 	 * Constructor for class ClientConnection
@@ -23,7 +23,7 @@ public class ClientConnection implements Runnable {
 	public ClientConnection(DatagramPacket receivePacket) {
 		try {
 			this.sendReceiveSocket = new DatagramSocket();
-			this.sendReceiveSocket1 = new DatagramSocket();
+			this.wrqSocket = new DatagramSocket();
 			this.sendReceiveSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
 			e.printStackTrace();
@@ -79,7 +79,7 @@ public class ClientConnection implements Runnable {
 		if(file.exists()) {
 			String errMsg = filename + "' already exists in server!";
 			Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), packet.getAddress(), packet.getPort());
-			send(sendReceiveSocket1, errorPacket.getPacket());
+			send(wrqSocket, errorPacket.getPacket());
 			System.out.println("Server says: " + errMsg + "\nTerminating...\n");
 		} else {
 			do {
@@ -87,15 +87,15 @@ public class ClientConnection implements Runnable {
 				// If we have enough space left, go on writing to file, other wise send error packet and terminate
 				if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
 					Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
-					send(sendReceiveSocket1, ack.getPacket());
-					receive(sendReceiveSocket1, aPacket);
+					send(wrqSocket, ack.getPacket());
+					receive(wrqSocket, aPacket);
 					byte[] content = DataPacket.getDataFromPacket(aPacket);
 					FileHandler.writeToFile(filename, content);
 					block++;
 				} else {
 					String errMsg = "Disk full. Only " + usableSpace + " byte space left";
 					Packet errorPacket = new ErrorPacket(3, errMsg.getBytes(), packet.getAddress(), packet.getPort());
-					send(sendReceiveSocket1, errorPacket.getPacket());
+					send(wrqSocket, errorPacket.getPacket());
 					System.out.println("Server says: " + errMsg + "\nTerminating...\n");
 					break;
 				}
@@ -103,7 +103,7 @@ public class ClientConnection implements Runnable {
 			// send last ACK
 			System.out.println("Sending Last ACK packet!");
 			Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
-			send(sendReceiveSocket1, ack.getPacket());
+			send(wrqSocket, ack.getPacket());
 		}
 	}
 
