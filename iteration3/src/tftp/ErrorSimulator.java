@@ -27,6 +27,7 @@ public class ErrorSimulator {
 	private enum Mode { NORMAL, LOSE, DELAY, DUPLICATE };
 	private int blockNumber = -1;
 	private enum PacketType { DATA, ACK };
+	private int delayedTime = -1;
 	
 	/**
 	 * Constructor for Host class. Creates a socket for receiving, another socket for both
@@ -189,8 +190,8 @@ public class ErrorSimulator {
 		System.out.println("        e.g. '1 2 DATA', '1 3 ACK' etc.");
 		
 		System.out.println("\n  - Delay a packet:");
-		System.out.println("      2 [Block #] [DATA or ACK]");
-		System.out.println("        e.g. '2 2 DATA', '2 3 ACK' etc.");
+		System.out.println("      2 [Block #] [DATA or ACK] [How much delay (in miliseconds)]");
+		System.out.println("        e.g. '2 2 DATA 7000', '2 3 ACK 8500' etc.");
 		
 		System.out.println("\n  - Duplicate a packet:");
 		System.out.println("      3 [Block #] [DATA or ACK]");
@@ -210,6 +211,21 @@ public class ErrorSimulator {
 		System.out.println("\nLOSE A PACKET: " + packetType + " packet with block #" + blockNumber + " will be lost.\n");
 	}
 	
+	private void handleDelayPacketInput(String input) {
+		this.mode = Mode.DELAY;
+		String[] parts = input.split(" ");
+		this.blockNumber = Integer.parseInt(parts[1]);
+		String packetTypeStr = parts[2];
+		if(packetTypeStr.toLowerCase().equals("data")) {
+			this.packetType = PacketType.DATA;
+		} else if(packetTypeStr.toLowerCase().equals("ack")) {
+			this.packetType = PacketType.ACK;
+		}
+		this.delayedTime = Integer.parseInt(parts[3]);
+		System.out.println("\nDELAY A PACKET: " + packetType + " packet with block #" + blockNumber
+				+ " will be delayed by " + this.delayedTime + " miliseconds.\n");
+	}
+	
 	public void takeInput() {
 		Scanner in = new Scanner(System.in);
 		while(true) {
@@ -221,6 +237,9 @@ public class ErrorSimulator {
 				break;
 			} else if(s.startsWith("1")) {	// lose packet
 				handleLosePacketInput(s);
+				break;
+			} else if(s.startsWith("2")) {	// lose packet
+				handleDelayPacketInput(s);
 				break;
 			}
 		}
