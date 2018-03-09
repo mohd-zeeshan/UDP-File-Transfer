@@ -118,6 +118,18 @@ public class ErrorSimulator {
 	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
 	}
 	
+	private boolean isDuplicateDataPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.DUPLICATE && this.packetType == PacketType.DATA 
+				&& Packet.isDATA(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
+	private boolean isDuplicateACKPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.DUPLICATE && this.packetType == PacketType.ACK 
+				&& Packet.isACK(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
 	/**
 	 * Handles lost data packets (see lecture slide "The TFTP Protocol: Part 2", page 24 timing diagram)
 	 * @param serverThreadAddress
@@ -167,6 +179,10 @@ public class ErrorSimulator {
 				} else if(isDelayACKPacketMode(sendToClientPacket) || isDelayDataPacketMode(sendToClientPacket)) {
 					sleep(this.delayedTime);
 					send(sendReceiveSocket, sendToClientPacket);
+				} else if(isDuplicateACKPacketMode(sendToClientPacket) || isDuplicateDataPacketMode(sendToClientPacket)) {
+					send(sendReceiveSocket, sendToClientPacket);
+					sleep(this.delayedTime);
+					send(sendReceiveSocket, sendToClientPacket);
 				} else {
 					send(sendReceiveSocket, sendToClientPacket);
 				}
@@ -183,6 +199,10 @@ public class ErrorSimulator {
 				if(isLoseDataPacketMode(sendToServerPacket) || isLoseACKPacketMode(sendToServerPacket)) {
 					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
 			    } else if(isDelayDataPacketMode(sendToServerPacket) || isDelayACKPacketMode(sendToServerPacket)) {
+			    	sleep(this.delayedTime);
+			    	send(sendReceiveSocket, sendToServerPacket);
+			    } else if(isDuplicateDataPacketMode(sendToServerPacket) || isDuplicateACKPacketMode(sendToServerPacket)) {
+			    	send(sendReceiveSocket, sendToServerPacket);
 			    	sleep(this.delayedTime);
 			    	send(sendReceiveSocket, sendToServerPacket);
 			    } else {
@@ -220,8 +240,8 @@ public class ErrorSimulator {
 		System.out.println("        e.g. '2 2 DATA 7000', '2 3 ACK 8500' etc.");
 		
 		System.out.println("\n  - Duplicate a packet:");
-		System.out.println("      3 [Block #] [DATA or ACK]");
-		System.out.println("        e.g. '3 2 DATA', '3 3 ACK' etc.");
+		System.out.println("      3 [Block #] [DATA or ACK] [Space between duplicates ((in miliseconds))]");
+		System.out.println("        e.g. '3 2 DATA 7000', '3 3 ACK 8500' etc.");
 	}
 	
 	private void handleLosePacketInput(String input) {
@@ -252,6 +272,21 @@ public class ErrorSimulator {
 				+ " will be delayed by " + this.delayedTime + " miliseconds.\n");
 	}
 	
+	private void handleDuplicatePacketInput(String input) {
+		this.mode = Mode.DUPLICATE;
+		String[] parts = input.split(" ");
+		this.blockNumber = Integer.parseInt(parts[1]);
+		String packetTypeStr = parts[2];
+		if(packetTypeStr.toLowerCase().equals("data")) {
+			this.packetType = PacketType.DATA;
+		} else if(packetTypeStr.toLowerCase().equals("ack")) {
+			this.packetType = PacketType.ACK;
+		}
+		this.delayedTime = Integer.parseInt(parts[3]);
+		System.out.println("\nDELAY A PACKET: " + packetType + " packet with block #" + blockNumber
+				+ " will be duplicated. Space between duplication: " + this.delayedTime + " miliseconds.\n");
+	}
+	
 	public void takeInput() {
 		Scanner in = new Scanner(System.in);
 		while(true) {
@@ -266,6 +301,9 @@ public class ErrorSimulator {
 				break;
 			} else if(s.startsWith("2")) {	// lose packet
 				handleDelayPacketInput(s);
+				break;
+			} else if(s.startsWith("3")) {	// lose packet
+				handleDuplicatePacketInput(s);
 				break;
 			}
 		}
