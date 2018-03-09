@@ -14,7 +14,7 @@ import packet.*;
 public class ClientConnection implements Runnable {
 
 	private DatagramPacket receivePacket;
-	private DatagramSocket sendReceiveSocket;
+	private DatagramSocket sendReceiveSocket, sendReceiveSocket1;
 	
 	/**
 	 * Constructor for class ClientConnection
@@ -23,6 +23,8 @@ public class ClientConnection implements Runnable {
 	public ClientConnection(DatagramPacket receivePacket) {
 		try {
 			this.sendReceiveSocket = new DatagramSocket();
+			this.sendReceiveSocket1 = new DatagramSocket();
+			this.sendReceiveSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
@@ -77,7 +79,7 @@ public class ClientConnection implements Runnable {
 		if(file.exists()) {
 			String errMsg = filename + "' already exists in server!";
 			Packet errorPacket = new ErrorPacket(6, errMsg.getBytes(), packet.getAddress(), packet.getPort());
-			send(sendReceiveSocket, errorPacket.getPacket());
+			send(sendReceiveSocket1, errorPacket.getPacket());
 			System.out.println("Server says: " + errMsg + "\nTerminating...\n");
 		} else {
 			do {
@@ -85,15 +87,15 @@ public class ClientConnection implements Runnable {
 				// If we have enough space left, go on writing to file, other wise send error packet and terminate
 				if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
 					Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
-					send(sendReceiveSocket, ack.getPacket());
-					receive(sendReceiveSocket, aPacket);
+					send(sendReceiveSocket1, ack.getPacket());
+					receive(sendReceiveSocket1, aPacket);
 					byte[] content = DataPacket.getDataFromPacket(aPacket);
 					FileHandler.writeToFile(filename, content);
 					block++;
 				} else {
 					String errMsg = "Disk full. Only " + usableSpace + " byte space left";
 					Packet errorPacket = new ErrorPacket(3, errMsg.getBytes(), packet.getAddress(), packet.getPort());
-					send(sendReceiveSocket, errorPacket.getPacket());
+					send(sendReceiveSocket1, errorPacket.getPacket());
 					System.out.println("Server says: " + errMsg + "\nTerminating...\n");
 					break;
 				}
@@ -101,7 +103,7 @@ public class ClientConnection implements Runnable {
 			// send last ACK
 			System.out.println("Sending Last ACK packet!");
 			Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
-			send(sendReceiveSocket, ack.getPacket());
+			send(sendReceiveSocket1, ack.getPacket());
 		}
 	}
 
@@ -130,7 +132,18 @@ public class ClientConnection implements Runnable {
 				
 				byte receivedData[] = new byte[500];
 			    DatagramPacket dp = new DatagramPacket(receivedData, receivedData.length);
-				receive(sendReceiveSocket, dp);
+//				receive(sendReceiveSocket, dp);
+			    
+			    System.out.println("Server says: Waiting for Packet from host...");
+			    try {
+			    	sendReceiveSocket.receive(dp);
+			    } catch (SocketTimeoutException e) {
+			    	System.out.println("\n*** Timeout of 5 seconds occured ***\nRE_TRANSMITTING...Sending again!\n");
+			    	send(sendReceiveSocket, dataPacket.getPacket());
+			    	sendReceiveSocket.receive(dp);
+			    }
+	    		Packet.printRequest(dp);
+			    System.out.println("Packet Recieved!\n");
 				
 				if(Packet.isACK(dp)) {
 					if(Packet.getBlockNumber(dp) == block) {
