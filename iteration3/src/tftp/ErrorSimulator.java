@@ -287,6 +287,9 @@ public class ErrorSimulator {
 				+ " will be duplicated. Space between duplication: " + this.delayedTime + " miliseconds.\n");
 	}
 	
+	/**
+	 * Take user input in order to simulate specific 
+	 */
 	public void takeInput() {
 		Scanner in = new Scanner(System.in);
 		while(true) {

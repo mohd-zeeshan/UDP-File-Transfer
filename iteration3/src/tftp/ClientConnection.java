@@ -13,6 +13,7 @@ import packet.*;
 
 public class ClientConnection implements Runnable {
 
+	private static final int SERVER_TIMEOUT = 5000;
 	private DatagramPacket receivePacket;
 	private DatagramSocket sendReceiveSocket, wrqSocket;
 	
@@ -24,7 +25,7 @@ public class ClientConnection implements Runnable {
 		try {
 			this.sendReceiveSocket = new DatagramSocket();
 			this.wrqSocket = new DatagramSocket();
-			this.sendReceiveSocket.setSoTimeout(5000);
+			this.sendReceiveSocket.setSoTimeout(SERVER_TIMEOUT);
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}

@@ -15,6 +15,7 @@ import packet.*;
  */
 public class Client {
 	
+	private static final int CLIENT_TIMEOUT = 5000;
 	private DatagramSocket sendReceiveSocket, rrqSocket;
 	private DatagramPacket  receivePacket;
 	public static int CLIENT_PORT = 23;
@@ -30,7 +31,7 @@ public class Client {
 		try {
 			sendReceiveSocket = new DatagramSocket();
 			rrqSocket = new DatagramSocket();
-			sendReceiveSocket.setSoTimeout(5000);
+			sendReceiveSocket.setSoTimeout(CLIENT_TIMEOUT);
 		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
