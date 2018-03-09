@@ -313,7 +313,6 @@ public class ErrorSimulator {
 
 	public static void main(String[] args) {
 		ErrorSimulator h = new ErrorSimulator();
-//		h.simulateErrors();
 		h.takeInput();
 	}
 
