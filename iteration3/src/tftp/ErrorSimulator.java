@@ -204,9 +204,9 @@ public class ErrorSimulator {
 		String[] parts = input.split(" ");
 		this.blockNumber = Integer.parseInt(parts[1]);
 		String packetTypeStr = parts[2];
-		if(packetTypeStr.equals("DATA")) {
+		if(packetTypeStr.toLowerCase().equals("data")) {
 			this.packetType = PacketType.DATA;
-		} else if(packetTypeStr.equals("ACK")) {
+		} else if(packetTypeStr.toLowerCase().equals("ack")) {
 			this.packetType = PacketType.ACK;
 		}
 		System.out.println("\nLOSE A PACKET: " + packetType + " packet with block #" + blockNumber + " will be lost.\n");

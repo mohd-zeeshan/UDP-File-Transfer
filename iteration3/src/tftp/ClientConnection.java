@@ -207,7 +207,6 @@ public class ClientConnection implements Runnable {
 		}
 	}
 
-
 	@Override
 	public void run() {
 		handleRQ(receivePacket);

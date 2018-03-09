@@ -201,7 +201,8 @@ public class Client {
 	}
 
 	/**
-	 * Sends packet via sendReceiveSocket
+	 * Sends packet via socket parameter
+	 * @param socket
 	 * @param packet
 	 */
 	private void send(DatagramSocket socket, DatagramPacket packet) {
@@ -219,6 +220,10 @@ public class Client {
 		}	
 	}
 	
+	/**
+	 * Send packet via sendReceiveSocket
+	 * @param packet
+	 */
 	private void send(DatagramPacket packet) {
 		send(this.sendReceiveSocket, packet);
 	}
