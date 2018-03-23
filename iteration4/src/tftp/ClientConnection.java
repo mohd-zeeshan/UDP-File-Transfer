@@ -57,12 +57,25 @@ public class ClientConnection implements Runnable {
 	 * @param packet
 	 */
 	public void handleRQ(DatagramPacket packet) {
-		if(Packet.isReadRequest(packet)) {
-			System.out.println("RRQ received...\n");
-			handleRRQ(packet);
-		} else if(Packet.isWriteRequest(packet)) {
-			System.out.println("WRQ received...\n");
-			handleWRQ(packet);
+		String mode = RequestPacket.getMode(packet).toLowerCase();
+		System.out.println(mode);
+		// If invalid MODE
+		if( !(mode.equals("netascii") || mode.equals("octec") || mode.equals("mail")) ) {
+			String errMsg = "Invalid Mode!";
+			Packet errorPacket = new ErrorPacket(4, errMsg.getBytes(), packet.getAddress(), packet.getPort());
+			send(sendReceiveSocket, errorPacket.getPacket());
+		} else {
+			if(Packet.isReadRequest(packet)) {
+				System.out.println("RRQ received...\n");
+				handleRRQ(packet);
+			} else if(Packet.isWriteRequest(packet)) {
+				System.out.println("WRQ received...\n");
+				handleWRQ(packet);
+			} else {		// ERROR-4: invalid TFTP opcode
+				String errMsg = "Invalid TFTP opcode!";
+				Packet errorPacket = new ErrorPacket(4, errMsg.getBytes(), packet.getAddress(), packet.getPort());
+				send(sendReceiveSocket, errorPacket.getPacket());
+			}
 		}
 	}
 	

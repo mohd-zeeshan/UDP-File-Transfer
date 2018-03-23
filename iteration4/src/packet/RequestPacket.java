@@ -72,4 +72,22 @@ public class RequestPacket extends Packet {
 		return fileName;
 	}
 	
+	/**
+	 * Extracts the mode from packet and returns it
+	 * @param packet
+	 * @return
+	 */
+	public static String getMode(DatagramPacket packet) {
+		int i = 2;
+		byte[] data = packet.getData();
+		while(data[i] != 0) {
+			i++;
+		}
+		String mode = "";
+		for(int j=i+1; j<packet.getLength()-1; j++) {
+			mode += Character.toString ((char) data[j]);
+		}
+		return mode;
+	}
+	
 }

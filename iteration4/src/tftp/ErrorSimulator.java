@@ -28,6 +28,8 @@ public class ErrorSimulator {
 	private int blockNumber = -1;
 	private enum PacketType { DATA, ACK };
 	private int delayedTime = -1;
+	private boolean invalidOpcode = false;
+	private boolean invalidMode = false;
 	
 	/**
 	 * Constructor for Host class. Creates a socket for receiving, another socket for both
@@ -82,8 +84,24 @@ public class ErrorSimulator {
 		clientPort = receiveFromClientPacket.getPort();
 		clientAddress = receiveFromClientPacket.getAddress();
 
+		if(this.invalidOpcode) {
+			System.out.println("Simulating Illegal TFTP operation (invalid TFTP opcode on RRQ or WRQ)");
+			data[1] = 6;
+			receiveFromClientPacket.setData(data);
+		}
+		
+		if(this.invalidMode) {
+			System.out.println("Simulating in valid mode:");
+			int opcode = data[1];
+			String filename = RequestPacket.getFilename(receiveFromClientPacket);
+			String mode = "invalidMode";
+			Packet rq = new RequestPacket(opcode, filename, mode, localHost, Server.SERVER_PORT);
+			sendToServerPacket = rq.getPacket();
+		} else {
+			sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), localHost, Server.SERVER_PORT);
+		}
+		
 		// Send To Server (69)
-		sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), localHost, Server.SERVER_PORT);
 		System.out.println("ErrorSimulator says: Sending packet to server...");
 		send(sendReceiveSocket, sendToServerPacket);
 
@@ -242,6 +260,12 @@ public class ErrorSimulator {
 		System.out.println("\n  - Duplicate a packet:");
 		System.out.println("      3 [Block #] [DATA or ACK] [Space between duplicates ((in miliseconds))]");
 		System.out.println("        e.g. '3 2 DATA 7000', '3 3 ACK 8500' etc.");
+		
+		System.out.println("\n  - Invalid TFTP opcode on RRQ or WRQ:");
+		System.out.println("      4");
+		
+		System.out.println("\n  - Invalid Mode:");
+		System.out.println("      5");
 	}
 	
 	private void handleLosePacketInput(String input) {
@@ -302,11 +326,17 @@ public class ErrorSimulator {
 			} else if(s.startsWith("1")) {	// lose packet
 				handleLosePacketInput(s);
 				break;
-			} else if(s.startsWith("2")) {	// lose packet
+			} else if(s.startsWith("2")) {	// delay packet
 				handleDelayPacketInput(s);
 				break;
-			} else if(s.startsWith("3")) {	// lose packet
+			} else if(s.startsWith("3")) {	// duplicate packet
 				handleDuplicatePacketInput(s);
+				break;
+			} else if(s.startsWith("4")) {	//  invalid TFTP opcode on RRQ or WRQ
+				this.invalidOpcode = true;
+				break;
+			} else if(s.startsWith("5")) {	//  invalid mode
+				this.invalidMode = true;
 				break;
 			}
 		}
