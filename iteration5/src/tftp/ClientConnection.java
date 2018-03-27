@@ -58,7 +58,6 @@ public class ClientConnection implements Runnable {
 	 */
 	public void handleRQ(DatagramPacket packet) {
 		String mode = RequestPacket.getMode(packet).toLowerCase();
-		System.out.println(mode);
 		// If invalid MODE
 		if( !(mode.equals("netascii") || mode.equals("octec") || mode.equals("mail")) ) {
 			String errMsg = "Invalid Mode!";

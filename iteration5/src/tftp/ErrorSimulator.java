@@ -255,11 +255,11 @@ public class ErrorSimulator {
 		
 		System.out.println("\n  - Delay a packet:");
 		System.out.println("      2 [Block #] [DATA or ACK] [How much delay (in miliseconds)]");
-		System.out.println("        e.g. '2 2 DATA 7000', '2 3 ACK 8500' etc.");
+		System.out.println("        e.g. '2 2 DATA 3000', '2 3 ACK 2500' etc.");
 		
 		System.out.println("\n  - Duplicate a packet:");
 		System.out.println("      3 [Block #] [DATA or ACK] [Space between duplicates ((in miliseconds))]");
-		System.out.println("        e.g. '3 2 DATA 7000', '3 3 ACK 8500' etc.");
+		System.out.println("        e.g. '3 2 DATA 3000', '3 3 ACK 2500' etc.");
 		
 		System.out.println("\n  - Invalid TFTP opcode on RRQ or WRQ:");
 		System.out.println("      4");
