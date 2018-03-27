@@ -22,6 +22,7 @@ public class Client {
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
 	private boolean rrqSuccessful, wrqSuccessful;
+	private String hostAddressStr;
 	
 	/**
 	 * Constructor for Client class. Creates a socket for sending and receiving.
@@ -45,8 +46,9 @@ public class Client {
 	public void read(String filename) {
 		try {
 			System.out.println("Sending RRQ...");
-			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
-//			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
+			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
+			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
+//			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
 			send(rrqSocket, request.getPacket());
 			receiveDataAndSendACK(filename);
 			if(rrqSuccessful) {
@@ -123,8 +125,9 @@ public class Client {
 				System.exit(1);
 			}
 			System.out.println("Sending WRQ...");
-			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), CLIENT_PORT);
-//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, InetAddress.getLocalHost(), Server.SERVER_PORT);
+			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
+			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
+//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
 			send(request.getPacket());
 			sendData(filename);
 			if(wrqSuccessful) {
@@ -256,35 +259,48 @@ public class Client {
 	    }
 	}
 	
+	private void printUsage() {
+		System.out.println("Usage:");
+		
+		System.out.println("\n  - Read a file:");
+		System.out.println("      read [filename] [host address]");
+		System.out.println("        e.g. 'read server_big.txt 192.168.46.1'");
+		
+		System.out.println("\n  - Write a file:");
+		System.out.println("      write [filename] [host address]");
+		System.out.println("        e.g. 'write client_big.txt 192.168.46.1'");
+		
+		System.out.println("\n  - Shut down client:");
+		System.out.println("      exit");
+	}
+	
 	/**
 	 * Takes user input. Asks if user wants to read or write file. Then asks for the filename
 	 * 
 	 */
 	public void takeInput() {
 		Scanner in = new Scanner(System.in);
+		printUsage();
 		while(true) {
-			System.out.println("Type and enter either of following:");
-			System.out.println("    1 : To read from server");
-			System.out.println("    2 : To write to server");
-			System.out.println("    exit : To shut down client");
-			System.out.print("> ");
+			System.out.print("\n> ");
 			String s = in.nextLine();
-			if(s.equals("1")) {
-				System.out.println("Enter the filename you want to read from: ");
-				System.out.print("> ");
-				String filename = in.nextLine();
+			if(s.startsWith("read")) {	
+				String[] parts = s.split(" ");
+				String filename = parts[1];
+				this.hostAddressStr = parts[2];
 				System.out.println("Reading " + filename + " from server...");
 				read(filename);
-			} else if(s.equals("2")) {
-				System.out.println("Enter the filename you want to write: ");
-				String filename = in.nextLine();
+			} else if(s.startsWith("write")) {	
+				String[] parts = s.split(" ");
+				String filename = parts[1];
+				this.hostAddressStr = parts[2];
 				System.out.println("Writing " + filename + " to server...");
-				System.out.print("> ");
 				write(filename);
 			} else if(s.equals("exit")) {
 				System.out.println("Shutting down client!");
 				break;
 			}
+			
 		}
 		in.close();
 		System.out.println("Done.");
