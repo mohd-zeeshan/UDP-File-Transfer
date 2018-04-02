@@ -23,6 +23,7 @@ public class Client {
 	private static final String DEFAULT_MODE = "netascii";
 	private boolean rrqSuccessful, wrqSuccessful;
 	private InetAddress hostAddress;
+	public int destinationTid = -1;
 	
 	/**
 	 * Constructor for Client class. Creates a socket for sending and receiving.
@@ -45,9 +46,8 @@ public class Client {
 	 */
 	public void read(String filename) {
 		System.out.println("Sending RRQ...");
-//			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
 		Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
-//			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
+//		Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
 		send(rrqSocket, request.getPacket());
 		receiveDataAndSendACK(filename);
 		if(rrqSuccessful) {
@@ -72,6 +72,18 @@ public class Client {
 			// If we have enough space left, go on writing to file, other wise send error packet and terminate
 			if(usableSpace > Packet.DATA_PACKET_SIZE-4) {
 				receive(rrqSocket);
+				if(this.destinationTid == -1) {
+					this.destinationTid = this.receivePacket.getPort();
+				}
+				int tid = this.receivePacket.getPort();
+				if(tid != this.destinationTid) {	// if tid changed, send error-4
+					rrqSuccessful = false;
+					String errMsg = "ERROR-4: Unknown TID: " + tid;
+					Packet errorPacket = new ErrorPacket(4, errMsg.getBytes(), receivePacket.getAddress(), this.destinationTid);
+					send(rrqSocket, errorPacket.getPacket());
+					System.out.println("Client says: " + errMsg + "\nTerminating...\n");
+					break;
+				}
 				if(!Packet.isDATA(receivePacket)) {
 					rrqSuccessful = false;
 					break;
@@ -253,11 +265,11 @@ public class Client {
 		System.out.println("Usage:");
 		
 		System.out.println("\n  - Read a file:");
-		System.out.println("      read [filename] [host address]");
+		System.out.println("      read [filename] [host address (optional)]");
 		System.out.println("        e.g. 'read server_big.txt 192.168.46.1'");
 		
 		System.out.println("\n  - Write a file:");
-		System.out.println("      write [filename] [host address]");
+		System.out.println("      write [filename] [host address (optional)]");
 		System.out.println("        e.g. 'write client_big.txt 192.168.46.1'");
 		
 		System.out.println("\n  - Shut down client:");

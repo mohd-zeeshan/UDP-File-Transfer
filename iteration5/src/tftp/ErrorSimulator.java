@@ -24,7 +24,7 @@ public class ErrorSimulator {
 	
 	private Mode mode;
 	private PacketType packetType;
-	private enum Mode { NORMAL, LOSE, DELAY, DUPLICATE };
+	private enum Mode { NORMAL, LOSE, DELAY, DUPLICATE, UNKNOWN_TID };
 	private int blockNumber = -1;
 	private enum PacketType { DATA, ACK };
 	private int delayedTime = -1;
@@ -148,6 +148,18 @@ public class ErrorSimulator {
 	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
 	}
 	
+	private boolean isUnknownTidDataPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.UNKNOWN_TID && this.packetType == PacketType.DATA 
+				&& Packet.isDATA(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
+	private boolean isUnknownTidACKPacketMode(DatagramPacket packet) {
+		return this.mode == Mode.UNKNOWN_TID && this.packetType == PacketType.ACK 
+				&& Packet.isACK(packet)
+	    		&& Packet.getBlockNumber(packet) == this.blockNumber;
+	}
+	
 	/**
 	 * Handles lost data packets (see lecture slide "The TFTP Protocol: Part 2", page 24 timing diagram)
 	 * @param serverThreadAddress
@@ -189,50 +201,68 @@ public class ErrorSimulator {
 			InetAddress serverThreadAddress = receiveFromServerPacket.getAddress();
 		    
 		    while(true) {
-		    	// Send To Client
-				sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
-				System.out.println("ErrorSimulator says: Sending packet to client...");
-				if(isLoseACKPacketMode(sendToClientPacket) || isLoseDataPacketMode(sendToClientPacket)) {
-					handleLoseACKPacketMode(serverThreadPort, serverThreadAddress);
-				} else if(isDelayACKPacketMode(sendToClientPacket) || isDelayDataPacketMode(sendToClientPacket)) {
-					sleep(this.delayedTime);
-					send(sendReceiveSocket, sendToClientPacket);
-				} else if(isDuplicateACKPacketMode(sendToClientPacket) || isDuplicateDataPacketMode(sendToClientPacket)) {
-					send(sendReceiveSocket, sendToClientPacket);
-					sleep(this.delayedTime);
-					send(sendReceiveSocket, sendToClientPacket);
-				} else {
-					send(sendReceiveSocket, sendToClientPacket);
+		    	try {
+		    		
+			    	// Send To Client
+					sendToClientPacket = new DatagramPacket(receiveFromServerPacket.getData(), receiveFromServerPacket.getLength(), clientAddress, clientPort);	
+					System.out.println("ErrorSimulator says: Sending packet to client...");
+					if(isLoseACKPacketMode(sendToClientPacket) || isLoseDataPacketMode(sendToClientPacket)) {
+						handleLoseACKPacketMode(serverThreadPort, serverThreadAddress);
+					} else if(isDelayACKPacketMode(sendToClientPacket) || isDelayDataPacketMode(sendToClientPacket)) {
+						sleep(this.delayedTime);
+						send(sendReceiveSocket, sendToClientPacket);
+					} else if(isDuplicateACKPacketMode(sendToClientPacket) || isDuplicateDataPacketMode(sendToClientPacket)) {
+						send(sendReceiveSocket, sendToClientPacket);
+						sleep(this.delayedTime);
+						send(sendReceiveSocket, sendToClientPacket);
+					} else if(isUnknownTidDataPacketMode(sendToClientPacket)) {
+						DatagramSocket invalidSocket = null;
+						System.out.println("\nChanging TID!!\n");
+						invalidSocket = new DatagramSocket();
+						send(invalidSocket, sendToClientPacket);
+						invalidSocket.close();
+					} else {
+						send(sendReceiveSocket, sendToClientPacket);
+					}
+	
+					// Receive from client 
+					byte[] data = new byte[Packet.DATA_PACKET_SIZE];
+				    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
+				    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
+			    	receive(sendReceiveSocket, receiveFromClientPacket);
+	
+			    	// Send To Server (client connection thread)
+					sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
+					System.out.println("ErrorSimulator says: Sending packet to server...");
+					if(isLoseDataPacketMode(sendToServerPacket) || isLoseACKPacketMode(sendToServerPacket)) {
+						handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
+				    } else if(isDelayDataPacketMode(sendToServerPacket) || isDelayACKPacketMode(sendToServerPacket)) {
+				    	sleep(this.delayedTime);
+				    	send(sendReceiveSocket, sendToServerPacket);
+				    } else if(isDuplicateDataPacketMode(sendToServerPacket) || isDuplicateACKPacketMode(sendToServerPacket)) {
+				    	send(sendReceiveSocket, sendToServerPacket);
+				    	sleep(this.delayedTime);
+				    	send(sendReceiveSocket, sendToServerPacket);
+				    } else if(isUnknownTidACKPacketMode(sendToServerPacket)) {
+						DatagramSocket invalidSocket = null;
+						System.out.println("\nChanging TID!!\n");
+						invalidSocket = new DatagramSocket();
+						send(invalidSocket, sendToServerPacket);
+						invalidSocket.close();
+				    } else {
+				    	send(sendReceiveSocket, sendToServerPacket);
+				    }
+	
+					// Receive From Server (client connection thread)
+					data = new byte[Packet.DATA_PACKET_SIZE];
+				    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
+				    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
+			    	receive(sendReceiveSocket, receiveFromServerPacket);
+			    	
+		    	} catch (SocketException e) {
+					e.printStackTrace();
+					System.exit(1);
 				}
-
-				// Receive from client 
-				byte[] data = new byte[Packet.DATA_PACKET_SIZE];
-			    receiveFromClientPacket = new DatagramPacket(data, data.length, clientAddress, clientPort);
-			    System.out.println("ErrorSimulator says: Waiting for Packet from client...");
-		    	receive(sendReceiveSocket, receiveFromClientPacket);
-
-		    	// Send To Server (client connection thread)
-				sendToServerPacket = new DatagramPacket(receiveFromClientPacket.getData(), receiveFromClientPacket.getLength(), serverThreadAddress, serverThreadPort);
-				System.out.println("ErrorSimulator says: Sending packet to server...");
-				if(isLoseDataPacketMode(sendToServerPacket) || isLoseACKPacketMode(sendToServerPacket)) {
-					handleLoseDataPacketMode(serverThreadAddress, serverThreadPort);
-			    } else if(isDelayDataPacketMode(sendToServerPacket) || isDelayACKPacketMode(sendToServerPacket)) {
-			    	sleep(this.delayedTime);
-			    	send(sendReceiveSocket, sendToServerPacket);
-			    } else if(isDuplicateDataPacketMode(sendToServerPacket) || isDuplicateACKPacketMode(sendToServerPacket)) {
-			    	send(sendReceiveSocket, sendToServerPacket);
-			    	sleep(this.delayedTime);
-			    	send(sendReceiveSocket, sendToServerPacket);
-			    } else {
-			    	send(sendReceiveSocket, sendToServerPacket);
-			    }
-
-				// Receive From Server (client connection thread)
-				data = new byte[Packet.DATA_PACKET_SIZE];
-			    receiveFromServerPacket = new DatagramPacket(data, data.length, serverThreadAddress, serverThreadPort);
-			    System.out.println("ErrorSimulator says: Waiting for Packet from server...");
-		    	receive(sendReceiveSocket, receiveFromServerPacket);
-				
 		    }
 		}
 	}
@@ -266,6 +296,10 @@ public class ErrorSimulator {
 		
 		System.out.println("\n  - Invalid Mode:");
 		System.out.println("      5");
+		
+		System.out.println("\n  - Illegal TFTP operation:");
+		System.out.println("      6 [Block #] [DATA or ACK]");
+		System.out.println("        e.g. '6 2 DATA', '6 3 ACK' etc.");
 	}
 	
 	private void handleLosePacketInput(String input) {
@@ -311,6 +345,19 @@ public class ErrorSimulator {
 				+ " will be duplicated. Space between duplication: " + this.delayedTime + " miliseconds.\n");
 	}
 	
+	private void handleUnknownTIDInput(String input) {
+		this.mode = Mode.UNKNOWN_TID;
+		String[] parts = input.split(" ");
+		this.blockNumber = Integer.parseInt(parts[1]);
+		String packetTypeStr = parts[2];
+		if(packetTypeStr.toLowerCase().equals("data")) {
+			this.packetType = PacketType.DATA;
+		} else if(packetTypeStr.toLowerCase().equals("ack")) {
+			this.packetType = PacketType.ACK;
+		}
+		System.out.println("\nUnknown TID: TID of " + packetType + " packet with block #" + blockNumber + " will be changed!\n");
+	}
+	
 	/**
 	 * Take user input in order to simulate specific 
 	 */
@@ -337,6 +384,9 @@ public class ErrorSimulator {
 				break;
 			} else if(s.startsWith("5")) {	//  invalid mode
 				this.invalidMode = true;
+				break;
+			} else if(s.startsWith("6")) {	// duplicate packet
+				handleUnknownTIDInput(s);
 				break;
 			}
 		}

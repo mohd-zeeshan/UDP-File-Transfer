@@ -16,6 +16,7 @@ public class ClientConnection implements Runnable {
 	private static final int SERVER_TIMEOUT = 5000;
 	private DatagramPacket receivePacket;
 	private DatagramSocket sendReceiveSocket, wrqSocket;
+	private int destinationTid;
 	
 	/**
 	 * Constructor for class ClientConnection
@@ -26,6 +27,7 @@ public class ClientConnection implements Runnable {
 			this.sendReceiveSocket = new DatagramSocket();
 			this.wrqSocket = new DatagramSocket();
 			this.sendReceiveSocket.setSoTimeout(SERVER_TIMEOUT);
+			this.destinationTid = receivePacket.getPort();
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
@@ -155,6 +157,16 @@ public class ClientConnection implements Runnable {
 			    	send(sendReceiveSocket, dataPacket.getPacket());
 			    	sendReceiveSocket.receive(dp);
 			    }
+			    
+			    if(this.destinationTid != dp.getPort()) {
+					String errMsg = "ERROR-4: Unknown TID: " + dp.getPort();
+					ErrorPacket ep = new ErrorPacket(4, errMsg.getBytes(), packet.getAddress(), this.destinationTid);
+					send(sendReceiveSocket, ep.getPacket());
+					System.out.println(errMsg + "\nTerminating!!!\n");
+					receiveLastACK = false;
+					break;
+			    }
+			    
 	    		Packet.printRequest(dp);
 			    System.out.println("Packet Recieved!\n");
 				
@@ -169,6 +181,7 @@ public class ClientConnection implements Runnable {
 				} else if(Packet.isERROR(dp)) {
 					System.out.println("Server says: ERROR Packet received with message: " + new String(dp.getData(), 4, dp.getLength()));
 					System.out.println("Terminating...\n");
+					receiveLastACK = false;
 					break;
 				}
 				block++;
