@@ -22,7 +22,7 @@ public class Client {
 	private static final String CLIENT_PATH = "test_files/client/";
 	private static final String DEFAULT_MODE = "netascii";
 	private boolean rrqSuccessful, wrqSuccessful;
-	private String hostAddressStr;
+	private InetAddress hostAddress;
 	
 	/**
 	 * Constructor for Client class. Creates a socket for sending and receiving.
@@ -44,23 +44,18 @@ public class Client {
 	 * @param filename	the name of the file we want to read
 	 */
 	public void read(String filename) {
-		try {
-			System.out.println("Sending RRQ...");
-			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
-			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
+		System.out.println("Sending RRQ...");
+//			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
+		Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
 //			Packet request = new ReadRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
-			send(rrqSocket, request.getPacket());
-			receiveDataAndSendACK(filename);
-			if(rrqSuccessful) {
-				System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
-			} else {
-				System.out.println("File read failed!");
-				File file = new File(CLIENT_PATH + filename);
-				if(file.exists()) file.delete();
-			}
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			System.exit(1);
+		send(rrqSocket, request.getPacket());
+		receiveDataAndSendACK(filename);
+		if(rrqSuccessful) {
+			System.out.println("File read successful! Saved at location: " + CLIENT_PATH + filename + "\n");
+		} else {
+			System.out.println("File read failed!");
+			File file = new File(CLIENT_PATH + filename);
+			if(file.exists()) file.delete();
 		}
 	}
 	
@@ -119,23 +114,18 @@ public class Client {
 	 * @param filename	the name of the file we want to read
 	 */
 	public void write(String filename) {
-		try {
-			if(!(new File(CLIENT_PATH + filename)).exists()) {
-				System.err.println("Client: File '" + CLIENT_PATH + filename + "' does not exist.\nNot sending WRQ\nTerminating...");
-				System.exit(1);
-			}
-			System.out.println("Sending WRQ...");
-			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
-			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
-//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
-			send(request.getPacket());
-			sendData(filename);
-			if(wrqSuccessful) {
-				System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
-			}
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
+		if(!(new File(CLIENT_PATH + filename)).exists()) {
+			System.err.println("Client: File '" + CLIENT_PATH + filename + "' does not exist.\nNot sending WRQ\nTerminating...");
 			System.exit(1);
+		}
+		System.out.println("Sending WRQ...");
+//			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
+		Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
+//			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
+		send(request.getPacket());
+		sendData(filename);
+		if(wrqSuccessful) {
+			System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
 		}
 	}
 	
@@ -284,21 +274,26 @@ public class Client {
 		while(true) {
 			System.out.print("\n> ");
 			String s = in.nextLine();
-			if(s.startsWith("read")) {	
-				String[] parts = s.split(" ");
-				String filename = parts[1];
-				this.hostAddressStr = parts[2];
-				System.out.println("Reading " + filename + " from server...");
-				read(filename);
-			} else if(s.startsWith("write")) {	
-				String[] parts = s.split(" ");
-				String filename = parts[1];
-				this.hostAddressStr = parts[2];
-				System.out.println("Writing " + filename + " to server...");
-				write(filename);
-			} else if(s.equals("exit")) {
-				System.out.println("Shutting down client!");
-				break;
+			try {
+				if(s.startsWith("read")) {	
+					String[] parts = s.split(" ");
+					String filename = parts[1];
+					this.hostAddress = parts.length < 3 ? InetAddress.getLocalHost() : InetAddress.getByName(parts[2]);
+					System.out.println("Reading " + filename + " from server...");
+					read(filename);
+				} else if(s.startsWith("write")) {	
+					String[] parts = s.split(" ");
+					String filename = parts[1];
+					this.hostAddress = parts.length < 3 ? InetAddress.getLocalHost() : InetAddress.getByName(parts[2]);
+					System.out.println("Writing " + filename + " to server...");
+					write(filename);
+				} else if(s.equals("exit")) {
+					System.out.println("Shutting down client!");
+					break;
+				}
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+				System.exit(1);
 			}
 			
 		}
