@@ -138,6 +138,10 @@ public class Client {
 		sendData(filename);
 		if(wrqSuccessful) {
 			System.out.println("File write successful! Saved at location: " + Server.SERVER_PATH + filename + "\n");
+		} else {
+			System.out.println("File write failed!");
+			File file = new File(Server.SERVER_PATH + filename);
+			if(file.exists()) file.delete();
 		}
 	}
 	
@@ -160,6 +164,18 @@ public class Client {
 			    System.out.println("Client says: Waiting for Packet from host...");
 			    try {
 			    	sendReceiveSocket.receive(receivePacket);
+			    	if(this.destinationTid == -1) {
+			    		this.destinationTid = this.receivePacket.getPort();
+			    	}
+			    	int tid = this.receivePacket.getPort();
+			    	if(this.destinationTid != tid) {
+			    		this.wrqSuccessful = false;
+						String errMsg = "ERROR-4: Unknown TID: " + tid;
+						Packet errorPacket = new ErrorPacket(4, errMsg.getBytes(), receivePacket.getAddress(), this.destinationTid);
+						send(errorPacket.getPacket());
+						System.out.println("Client says: " + errMsg + "\nTerminating...\n");
+						break;
+			    	}
 			    } catch (SocketTimeoutException e) {
 			    	System.out.println("\n*** Timeout of 5 seconds occured ***\nRE_TRANSMITTING...Sending again!\n");
 					send(dataPacket.getPacket());

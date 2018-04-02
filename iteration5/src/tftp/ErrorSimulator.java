@@ -215,7 +215,7 @@ public class ErrorSimulator {
 						send(sendReceiveSocket, sendToClientPacket);
 						sleep(this.delayedTime);
 						send(sendReceiveSocket, sendToClientPacket);
-					} else if(isUnknownTidDataPacketMode(sendToClientPacket)) {
+					} else if(isUnknownTidDataPacketMode(sendToClientPacket) || isUnknownTidACKPacketMode(sendToClientPacket)) {
 						DatagramSocket invalidSocket = null;
 						System.out.println("\nChanging TID!!\n");
 						invalidSocket = new DatagramSocket();

@@ -87,6 +87,7 @@ public class ClientConnection implements Runnable {
 	 */
 	private void handleWRQ(DatagramPacket packet) {
 		int block = 0;
+		boolean sendLastACK = true;
 		byte data[] = new byte[Packet.DATA_PACKET_SIZE];
 	    DatagramPacket aPacket = new DatagramPacket(data, data.length);   
 		String filename = Server.SERVER_PATH + RequestPacket.getFilename(packet);
@@ -104,9 +105,16 @@ public class ClientConnection implements Runnable {
 					Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
 					send(wrqSocket, ack.getPacket());
 					receive(wrqSocket, aPacket);
-					byte[] content = DataPacket.getDataFromPacket(aPacket);
-					FileHandler.writeToFile(filename, content);
-					block++;
+					if(Packet.isDATA(aPacket)) {
+						byte[] content = DataPacket.getDataFromPacket(aPacket);
+						FileHandler.writeToFile(filename, content);
+						block++;
+					} else if(Packet.isERROR(aPacket)) {
+						sendLastACK = false;
+						System.out.println("Server says: ERROR Packet received with message: " + new String(aPacket.getData(), 4, aPacket.getLength()));
+						System.out.println("Terminating...\n");
+						break;
+					}
 				} else {
 					String errMsg = "Disk full. Only " + usableSpace + " byte space left";
 					Packet errorPacket = new ErrorPacket(3, errMsg.getBytes(), packet.getAddress(), packet.getPort());
@@ -116,9 +124,11 @@ public class ClientConnection implements Runnable {
 				}
 			} while(!DataPacket.isLastPacket(aPacket));
 			// send last ACK
-			System.out.println("Sending Last ACK packet!");
-			Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
-			send(wrqSocket, ack.getPacket());
+			if(sendLastACK) {
+				System.out.println("Sending Last ACK packet!");
+				Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
+				send(wrqSocket, ack.getPacket());
+			}
 		}
 	}
 
