@@ -105,6 +105,16 @@ public class ClientConnection implements Runnable {
 					Packet ack = new ACKPacket(ACKPacket.getBlockFromInt(block), packet.getAddress(), packet.getPort());
 					send(wrqSocket, ack.getPacket());
 					receive(wrqSocket, aPacket);
+					
+				    if(this.destinationTid != aPacket.getPort()) {
+						String errMsg = "ERROR-4: Unknown TID: " + aPacket.getPort();
+						ErrorPacket ep = new ErrorPacket(4, errMsg.getBytes(), packet.getAddress(), this.destinationTid);
+						send(sendReceiveSocket, ep.getPacket());
+						System.out.println(errMsg + "\nTerminating!!!\n");
+						sendLastACK = false;
+						break;
+				    }
+					
 					if(Packet.isDATA(aPacket)) {
 						byte[] content = DataPacket.getDataFromPacket(aPacket);
 						FileHandler.writeToFile(filename, content);
