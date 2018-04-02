@@ -131,7 +131,6 @@ public class Client {
 			System.exit(1);
 		}
 		System.out.println("Sending WRQ...");
-//			InetAddress hostAddress = InetAddress.getByName(hostAddressStr);
 		Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, CLIENT_PORT);
 //			Packet request = new WriteRequestPacket(filename, DEFAULT_MODE, hostAddress, Server.SERVER_PORT);
 		send(request.getPacket());
